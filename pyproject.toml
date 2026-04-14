@@ -1,0 +1,100 @@
+[project]
+name = "netdoc-discovery"
+version = "0.1.0"
+description = "NetDoc - discovery module"
+authors = [
+    {name = "Andrea Cavazzini",email = "cavazzini.andrea@gmail.com"},
+    {name = "Andrea Dainese",email = "andrea.dainese@gmail.com"}
+]
+license = "LICENSE"
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "netmiko (>=4.6.0,<5.0.0)",
+    "nornir (>=3.5.0,<4.0.0)",
+    "nornir-netmiko (>=1.0.1,<2.0.0)",
+    "pyyaml (>=6.0.3,<7.0.0)",
+    "textfsm (>=2.1.0,<3.0.0)"
+]
+
+[project.scripts]
+netdoc-discovery = "netdoc_discovery.main:main"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+name = "netdoc-discovery"
+
+[tool.poetry.group.dev.dependencies]
+cyclonedx-bom = "^7.2.1"
+jinja2 = "^3.1.6"
+pre-commit = "^4.5.1"
+pytest = "^9.0.3"
+pyyaml = "^6.0.3"
+tomlkit = "^0.13.3"
+
+
+[tool.black]
+exclude = '''
+/(
+  __pycache__
+  | \.git
+  | \.venv
+  | .vscode
+  | build
+  | dist
+  | fonts
+  | migrations
+  | venv
+)/
+'''
+skip-string-normalization = true
+target-version = ["py310", "py311", "py312", "py313"]
+
+
+[tool.djlint]
+exclude="__pycache__,.git,.venv,.vscode,build,dist,env,fonts,migrations,tests,venv"
+ignore="H021"
+profile="jinja"
+
+
+[tool.pyright]
+typeCheckingMode = "off"
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+addopts = "-v -ra --strict-markers --strict-config"
+
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "__pycache__",
+    ".git",
+    ".venv",
+    ".vscode",
+    "build",
+    "dist",
+    "env",
+    "fonts",
+    "migrations",
+    "venv",
+]
+target-version = "py310"
+
+[tool.ruff.format]
+indent-style = "space"            # Indent with spaces
+line-ending = "lf"                # Default line ending on Unix
+quote-style = "single"            # Use single quotes for strings.
+skip-magic-trailing-comma = false # Respect magic trailing commas
