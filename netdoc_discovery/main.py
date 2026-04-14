@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """NetDoc discoverer."""
 
+import os
 import argparse
 import logging
 import sys
 from datetime import datetime
 from pathlib import Path
 import yaml
+import netdoc_discovery
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from netdoc_discovery.core.ansible_inventory import NetDocAnsibleInventory
@@ -28,15 +30,11 @@ def load_config(path: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description='NetDoc discoverer')
     parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
-    parser.add_argument(
-        '--inventory', default=None, help='Override local inventory file'
-    )
+    parser.add_argument('--inventory', default=None, help='Override local inventory file')
     parser.add_argument('--output', default=None, help='Override output directory')
     parser.add_argument('--workers', default=None, help='Override worker instances')
     parser.add_argument('--url', default=None, help='Override backend URL')
-    parser.add_argument(
-        '--verify', default=None, help='Override backend cert verification'
-    )
+    parser.add_argument('--verify', default=None, help='Override backend cert verification')
     parser.add_argument('--timeout', default=None, help='Override backend timeout')
     parser.add_argument('--token', default=None, help='Override API token')
     args = parser.parse_args()
@@ -66,6 +64,11 @@ def main() -> int:
     else:
         logger.error('At least inventory_file or backend_url is required')
         sys.exit(1)
+
+    # Setting NET_TEXTFSM directory
+    ntc_template_path = Path(netdoc_discovery.__file__).parent / Path('ntc_templates')
+    logging.info('Using NTC templates from %s', ntc_template_path)
+    os.environ["NET_TEXTFSM"] = str(ntc_template_path)
 
     # Initialising Nornir
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
