@@ -14,6 +14,8 @@ from .base import BasePlugin
 from .netmiko_cisco_ios import NetmikoCiscoIOSPlugin
 from .netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
 from .netmiko_cisco_xr import NetmikoCiscoXRPlugin
+from .netmiko_huawei_vrp import NetmikoHuaweiVRPPlugin
+from .netmiko_hp_procurve import NetmikoHPProcurvePlugin
 
 
 # ---------------------------------------------------------------------------
@@ -29,8 +31,8 @@ PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
     'netmiko:cisco:nxos': NetmikoCiscoNXOSPlugin,
     'netmiko:cisco:xr': NetmikoCiscoXRPlugin,
     # 'netmiko:hp:comware': NetmikoHPComwarePlugin,
-    # 'netmiko:hp:procurve': NetmikoHPProcurvePlugin, # TODO: should implement telnet
-    # 'netmiko:huawei:vrp': NetmikoHuaweiVRPPlugin,
+    'netmiko:hp:procurve': NetmikoHPProcurvePlugin,  # TODO: should implement telnet
+    'netmiko:huawei:vrp': NetmikoHuaweiVRPPlugin,
     # 'netmiko:linux:ios': NetmikoCiscoIOSPlugin,
 }
 
