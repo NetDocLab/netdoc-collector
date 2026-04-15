@@ -129,9 +129,7 @@ class NetmikoCiscoIOSPlugin(BasePlugin):
 
         # Running Standard commands
         for cmd in self.commands():
-            raw_output, parsed_output = self.run_netmiko_cmd(
-                task, netmiko_device_type, cmd
-            )
+            raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
             raw_outputs[cmd] = raw_output
             if parsed_output:
                 parsed_outputs[cmd] = parsed_output
@@ -140,15 +138,13 @@ class NetmikoCiscoIOSPlugin(BasePlugin):
         vrfs = ['default'] + [vrf['name'] for vrf in parsed_outputs.get('show vrf', [])]
         for vrf in vrfs:
             for cmd in self.commands(vrf=vrf):
-                raw_output, parsed_output = self.run_netmiko_cmd(
-                    task, netmiko_device_type, cmd
-                )
+                raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
                 raw_outputs[cmd] = raw_output
                 if parsed_output:
                     parsed_outputs[cmd] = parsed_output
 
         # Convert to NetDoc format
         netdoc_output = self.to_netdoc_dict(parsed_outputs)
-        self.write_output(netdoc_output, 'netdoc_report')
+        self.write_output(netdoc_output, 'netdoc-device-report')
 
         return netdoc_output

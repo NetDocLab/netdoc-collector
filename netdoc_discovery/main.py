@@ -2,6 +2,7 @@
 """NetDoc discoverer."""
 
 import os
+import shutil
 import argparse
 import logging
 import sys
@@ -13,6 +14,7 @@ from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from netdoc_discovery.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_discovery.core.tasks import discovery_task
+from netdoc_discovery.core.aggregator import aggregate_and_write
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,11 +29,20 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
+def is_valid_dir(name):
+    try:
+        datetime.strptime(name, '%Y-%m-%d-%H:%M:%S')
+        return True
+    except ValueError:
+        return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description='NetDoc discoverer')
     parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
     parser.add_argument('--inventory', default=None, help='Override local inventory file')
     parser.add_argument('--output', default=None, help='Override output directory')
+    parser.add_argument('--retention', default=None, help='Override retention')
     parser.add_argument('--workers', default=None, help='Override worker instances')
     parser.add_argument('--url', default=None, help='Override backend URL')
     parser.add_argument('--verify', default=None, help='Override backend cert verification')
@@ -43,6 +54,7 @@ def main() -> int:
     cfg = load_config(args.config)
     inventory_file = args.inventory or cfg.get('inventory', None)
     output_dir = args.output or cfg.get('output', './output')
+    retention = args.retention or cfg.get('retention')
     num_workers = args.workers or cfg.get('workers', 5)
     backend_data = cfg.get('backend', {})
     backend_url = args.url or backend_data.get('url')
@@ -95,7 +107,8 @@ def main() -> int:
     logger.info('Discovery completed (failed on %i hosts)', failed_hosts)
 
     # Dump results
-    # aggregate_and_write(results, report_path)
+    netdoc_results = aggregate_and_write(results, report_path)
+
     # if args.api_token:
     #     from netdoc_discovery.api_sender import send_to_api
 
@@ -105,6 +118,17 @@ def main() -> int:
     #         token=args.api_token,
     #         timeout=cfg["api"]["timeout"],
     #     )
+
+    # Cleaming older outputs
+    if output_dir and retention:
+        snapshot_dirs = sorted(
+            [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and is_valid_dir(d)],
+            reverse=True,
+        )
+        to_delete = snapshot_dirs[retention:]
+        for d in to_delete:
+            logging.info("Deleted snapshot directory %s", d)
+            shutil.rmtree(os.path.join(output_dir, d))
 
     return 1 if failed_hosts else 0
 

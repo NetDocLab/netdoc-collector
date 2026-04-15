@@ -22,10 +22,14 @@ a single YAML file with the following structure:
       ...
 """
 
+from pathlib import Path
+import os
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
+import yaml
 from nornir.core.task import AggregatedResult
 
 logger = logging.getLogger(__name__)
@@ -43,43 +47,48 @@ def aggregate_and_write(results: AggregatedResult, output_path: str) -> dict[str
         The aggregated dict (also written to disk).
     """
 
-    output_path.mkdir(parents=True, exist_ok=True)
+    device_data = []
+    errors = []
+    failed_host_num = 0
 
-    hosts_data: dict[str, Any] = {}
-    failed: list[str] = []
+    # hosts_data: dict[str, Any] = {}
+    # failed: list[str] = []
 
     for host_name, multi_result in results.items():
         if multi_result.failed:
-            logger.warning("Host '%s' failed: %s", host_name, multi_result.exception)
-            failed.append(host_name)
-            hosts_data[host_name] = {
-                'error': str(multi_result.exception or 'unknown error')
-            }
+            error = f'Discovery failed on {host_name}: '
+            error += str(multi_result.exception or "unknown error")
+            errors.append(error)
+            failed_host_num += 1
             continue
 
         # The last Result in MultiResult is the return value of discovery_task itself
         task_result = multi_result[0].result
         if task_result is not None:
-            hosts_data[host_name] = task_result
+            device_data.append(
+                {
+                    "name": host_name,
+                    "result": task_result,
+                }
+            )
         else:
-            hosts_data[host_name] = {'error': 'task returned no data'}
-            failed.append(host_name)
+            errors.append(f"Task on {host_name} returned no data")
 
     output = {
-        'metadata': {
-            'generated_at': datetime.now(timezone.utc).isoformat(),
-            'total_hosts': len(results),
-            'successful_hosts': len(results) - len(failed),
-            'failed_hosts': len(failed),
-            'failed_host_names': failed,
+        "metadata": {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "total_hosts": len(results),
+            "successful_hosts": len(results) - failed_host_num,
+            "errors": errors,
         },
-        'hosts': hosts_data,
+        "devices": device_data,
     }
 
-    # os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    print(output)
-    # with open(output_path, "w") as f:
-    #     yaml.dump(output, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    # Write to disk
+    if output_path:
+        output_path.mkdir(exist_ok=True, parents=True)
+        with open(output_path / Path(f'netdoc-report.json'), 'w', encoding='utf-8') as fh:
+            json.dump(output, fh, indent=2)
+        return
 
-    logger.info("YAML output written to '%s' (%d hosts)", output_path, len(hosts_data))
     return output
