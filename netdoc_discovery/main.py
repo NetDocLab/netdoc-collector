@@ -25,8 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 def load_config(path: str) -> dict:
-    with open(path) as f:
-        return yaml.safe_load(f)
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        pass
+    return {}
 
 
 def is_valid_dir(name):

@@ -11,7 +11,7 @@ Example registry key: ("cisco", "ios") -> CiscoIOSPlugin
 import logging
 from typing import Type
 from .base import BasePlugin
-from .cisco_ios import NetmikoCiscoIOSPlugin
+from .netmiko_cisco_ios import NetmikoCiscoIOSPlugin
 
 
 # ---------------------------------------------------------------------------
@@ -19,16 +19,21 @@ from .cisco_ios import NetmikoCiscoIOSPlugin
 # ---------------------------------------------------------------------------
 
 PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
-    'netmiko:cisco:ios': NetmikoCiscoIOSPlugin,
-    # ("cisco", "nxos"): CiscoNXOSPlugin,   # add when implemented
-    # ("aruba", "aos-cx"): ArubaPlugin,
-    # ("huawei", "vrp"): HuaweiPlugin,
+    # 'http:panw:ngfw': NetmikoCiscoIOSPlugin,
+    # 'http:vmware:vsphere': NetmikoCiscoIOSPlugin,
+    # 'netmiko:allied_telesis:awplus': NetmikoAlliedTelesisAwplusPlugin,
+    # 'netmiko:aruba:oscx': NetmikoArubaOSCXPlugin,
+    'netmiko:cisco:ios': NetmikoCiscoIOSPlugin,  # TODO: should implement telnet
+    # 'netmiko:cisco:nxos': NetmikoCiscoNXOSlugin,
+    # 'netmiko:cisco:xr': NetmikoCiscoXRPlugin,
+    # 'netmiko:hp:comware': NetmikoHPComwarePlugin,
+    # 'netmiko:hp:procurve': NetmikoHPProcurvePlugin, # TODO: should implement telnet
+    # 'netmiko:huawei:vrp': NetmikoHuaweiVRPPlugin,
+    # 'netmiko:linux:ios': NetmikoCiscoIOSPlugin,
 }
 
 
-def get_plugin(
-    plugin: str, host_name: str, host_data: dict, report_path=None
-) -> BasePlugin:
+def get_plugin(plugin: str, host_name: str, host_data: dict, report_path=None) -> BasePlugin:
     """
     Instantiate and return the correct plugin for a given vendor/platform.
 
