@@ -5,41 +5,29 @@ from .base import BasePlugin
 # TODO: not tested
 
 
-class NetmikoHPComwarePlugin(BasePlugin):
+class NetmikoLinuxPlugin(BasePlugin):
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:
             # VRF aware commands
+            if vrf == 'default':
+                # Default VRF is blank
+                return [
+                    "show ip arp",
+                    "ip route show",
+                ]
             return [
-                f"display arp vpn-instance {vrf}",
-                f"display ip vpn-instance instance-name {vrf}",
-                f"display ip routing-table vpn-instance {vrf}",
+                f"show ip arp vrf {vrf}",
+                f"ip route show table {vrf}",
             ]
 
         # Standard commands
         return [
-            ("display current-configuration | include sysname", "HOSTNAME"),
-            ("display current-configuration", None),
-            # Depending on version, "brief" may be unsupportted
-            ("display vlan brief", None),
-            ("display vlan all", None),
-            # Depending on version, "verbose" may be unsupportted
-            ("display lldp neighbor-information verbose", None),
-            ("display lldp neighbor-information list", None),
-            ("display ip vpn-instance", None),
-            ("display interface", None),
-            ("display ip interface", None),
-            ("display mac-address", None),
-            ("display link-aggregation verbose", None),
-            ("display_device_manuinfo", None),
-            # Unsupported
-            ("display version", None),
-            ("display logbuffer level 6", None),
-            ("display stp", None),
-            ("display port trunk", None),
-            ("display vrrp", None),
-            ("display ospf peer", None),
-            ("display bgp peer", None),
+            "hostname",
+            "ip link show",
+            "ip address show",
+            "ip vrf show",
+            # "arp -an",
         ]
 
     @staticmethod
@@ -102,6 +90,15 @@ class NetmikoHPComwarePlugin(BasePlugin):
             raw_outputs[cmd] = raw_output
             if parsed_output:
                 parsed_outputs[cmd] = parsed_output
+
+        # Running VRF aware commands
+        vrfs = ['default'] + [vrf['name'] for vrf in parsed_outputs.get('show vrf', [])]
+        for vrf in vrfs:
+            for cmd in self.commands(vrf=vrf):
+                raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+                raw_outputs[cmd] = raw_output
+                if parsed_output:
+                    parsed_outputs[cmd] = parsed_output
 
         # Convert to NetDoc format
         netdoc_output = self.to_netdoc_dict(parsed_outputs)

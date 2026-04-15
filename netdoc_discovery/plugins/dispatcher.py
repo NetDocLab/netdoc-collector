@@ -11,11 +11,15 @@ Example registry key: ("cisco", "ios") -> CiscoIOSPlugin
 import logging
 from typing import Type
 from .base import BasePlugin
+from .netmiko_aruba_oscx import NetmikoArubaOSCXPlugin
 from .netmiko_cisco_ios import NetmikoCiscoIOSPlugin
 from .netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
 from .netmiko_cisco_xr import NetmikoCiscoXRPlugin
-from .netmiko_huawei_vrp import NetmikoHuaweiVRPPlugin
+from .netmiko_hp_comware import NetmikoHPComwarePlugin
 from .netmiko_hp_procurve import NetmikoHPProcurvePlugin
+from .netmiko_huawei_vrp import NetmikoHuaweiVRPPlugin
+from .netmiko_linux import NetmikoLinuxPlugin
+from .netmiko_allied_telesis_awplus import NetmikoAlliedTelesisAwplusPlugin
 
 
 # ---------------------------------------------------------------------------
@@ -23,17 +27,17 @@ from .netmiko_hp_procurve import NetmikoHPProcurvePlugin
 # ---------------------------------------------------------------------------
 
 PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
-    # 'http:panw:ngfw': NetmikoCiscoIOSPlugin,
-    # 'http:vmware:vsphere': NetmikoCiscoIOSPlugin,
-    # 'netmiko:allied_telesis:awplus': NetmikoAlliedTelesisAwplusPlugin,
-    # 'netmiko:aruba:oscx': NetmikoArubaOSCXPlugin,
+    # 'netdoc:panw:ngfw': NetmikoCiscoIOSPlugin,
+    # 'netdoc:vmware:vsphere': NetmikoCiscoIOSPlugin,
+    'netmiko:allied_telesis:awplus': NetmikoAlliedTelesisAwplusPlugin,
+    'netmiko:aruba:oscx': NetmikoArubaOSCXPlugin,
     'netmiko:cisco:ios': NetmikoCiscoIOSPlugin,  # TODO: should implement telnet
     'netmiko:cisco:nxos': NetmikoCiscoNXOSPlugin,
     'netmiko:cisco:xr': NetmikoCiscoXRPlugin,
-    # 'netmiko:hp:comware': NetmikoHPComwarePlugin,
+    'netmiko:hp:comware': NetmikoHPComwarePlugin,
     'netmiko:hp:procurve': NetmikoHPProcurvePlugin,  # TODO: should implement telnet
     'netmiko:huawei:vrp': NetmikoHuaweiVRPPlugin,
-    # 'netmiko:linux:ios': NetmikoCiscoIOSPlugin,
+    'netmiko:linux::': NetmikoLinuxPlugin,
 }
 
 
