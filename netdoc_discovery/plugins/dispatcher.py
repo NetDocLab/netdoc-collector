@@ -12,6 +12,8 @@ import logging
 from typing import Type
 from .base import BasePlugin
 from .netmiko_cisco_ios import NetmikoCiscoIOSPlugin
+from .netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
+from .netmiko_cisco_xr import NetmikoCiscoXRPlugin
 
 
 # ---------------------------------------------------------------------------
@@ -24,8 +26,8 @@ PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
     # 'netmiko:allied_telesis:awplus': NetmikoAlliedTelesisAwplusPlugin,
     # 'netmiko:aruba:oscx': NetmikoArubaOSCXPlugin,
     'netmiko:cisco:ios': NetmikoCiscoIOSPlugin,  # TODO: should implement telnet
-    # 'netmiko:cisco:nxos': NetmikoCiscoNXOSlugin,
-    # 'netmiko:cisco:xr': NetmikoCiscoXRPlugin,
+    'netmiko:cisco:nxos': NetmikoCiscoNXOSPlugin,
+    'netmiko:cisco:xr': NetmikoCiscoXRPlugin,
     # 'netmiko:hp:comware': NetmikoHPComwarePlugin,
     # 'netmiko:hp:procurve': NetmikoHPProcurvePlugin, # TODO: should implement telnet
     # 'netmiko:huawei:vrp': NetmikoHuaweiVRPPlugin,
