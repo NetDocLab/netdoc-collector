@@ -46,7 +46,7 @@ def main() -> int:
     parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
     parser.add_argument('--inventory', default=None, help='Override local inventory file')
     parser.add_argument('--output', default=None, help='Override output directory')
-    parser.add_argument('--retention', default=None, help='Override retention')
+    parser.add_argument('--retention', default=5, help='Override retention')
     parser.add_argument('--workers', default=None, help='Override worker instances')
     parser.add_argument('--url', default=None, help='Override backend URL')
     parser.add_argument('--verify', default=None, help='Override backend cert verification')
