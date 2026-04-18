@@ -51,6 +51,7 @@ def main() -> int:
     parser.add_argument('--url', default=None, help='Override backend URL')
     parser.add_argument('--verify', default=None, help='Override backend cert verification')
     parser.add_argument('--timeout', default=None, help='Override backend timeout')
+    parser.add_argument('--cmd-timeout', default=None, help='Override CMD timeout')  # TODO
     parser.add_argument('--token', default=None, help='Override API token')
     args = parser.parse_args()
 
