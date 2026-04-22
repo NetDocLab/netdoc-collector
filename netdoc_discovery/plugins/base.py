@@ -17,6 +17,7 @@ from textfsm.parser import TextFSMError
 from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
 from netmiko.utilities import get_structured_data
+from netdoc_sdk.models import *
 
 
 logger = logging.getLogger(__name__)
