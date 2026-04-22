@@ -20,6 +20,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s  %(levelname)-8s  %(name)s  %(message)s',
     datefmt='%Y-%m-%dT%H:%M:%S',
+    filename='netdoc_discovery.log',
 )
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def main() -> int:
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         inventory = inventory_file
         now = datetime.now()
-        report_path = Path(output_dir) / Path(now.strftime('%Y-%m-%d-%H:%M:%S'))
+        report_path = Path(output_dir) / Path(now.strftime('%Y%m%d-%H%M%S'))
     else:
         logger.error('At least inventory_file or backend_url is required')
         sys.exit(1)

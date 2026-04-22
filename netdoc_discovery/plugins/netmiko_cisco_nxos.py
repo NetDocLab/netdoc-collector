@@ -29,7 +29,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             "show ip ospf neighbor",
             "show ip route vrf all",
             "show lldp neighbors detail",
-            "show logging",
+            #"show logging",
             "show mac address-table dynamic",
             "show port-channel summary",
             "show running-config",

@@ -35,8 +35,9 @@ class NetDocAnsibleInventory:
             if os.access(inventory, os.X_OK):
                 # Inventory is an executable file
                 logging.info('Reading inventory from executable file')
-                # TODO
-                pass
+                # TODO - should execute file and parse output instead of just reading it as JSON
+                with open(inventory) as fh:
+                    self.inventory = json.load(fh)
             else:
                 # Inventory is a non executable file
                 logging.info('Reading inventory from JSON file')
