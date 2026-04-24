@@ -67,6 +67,7 @@ class NetmikoCiscoIOSPlugin(BasePlugin):
             'show running-config',
             'show spanning-tree',
             'show standby',
+            'show switch',
             'show version',
             'show vlan',
             'show vrf',
