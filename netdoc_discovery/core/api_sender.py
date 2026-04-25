@@ -9,7 +9,7 @@ Called only when --api-token is provided on the CLI.
 
 import logging
 import yaml
-import requests
+# import requests
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,9 @@ def send_to_api(yaml_path: str, api_url: str, token: str, timeout: int = 30) -> 
         token:     Bearer token for authentication
         timeout:   HTTP request timeout in seconds
     """
+
+    return
+"""
     with open(yaml_path) as f:
         payload = yaml.safe_load(f)
 
@@ -50,4 +53,4 @@ def send_to_api(yaml_path: str, api_url: str, token: str, timeout: int = 30) -> 
             response.reason,
             response.text[:200],
         )
-        response.raise_for_status()
+        response.raise_for_status()"""
