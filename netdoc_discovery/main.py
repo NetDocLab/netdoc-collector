@@ -45,14 +45,14 @@ def is_valid_dir(name):
 def main() -> int:
     parser = argparse.ArgumentParser(description='NetDoc discoverer')
     parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
-    parser.add_argument('--inventory', default=None, help='Override local inventory file')
-    parser.add_argument('--output', default=None, help='Override output directory')
-    parser.add_argument('--retention', default=5, help='Override retention')
-    parser.add_argument('--workers', default=5, help='Override worker instances')
-    parser.add_argument('--url', default="localhost:8000", help='Override backend URL')
+    parser.add_argument('--inventory', default='inventory.json', help='Override local inventory file')
+    parser.add_argument('--output', default= './output', help='Override output directory')
+    parser.add_argument('--retention', default=5, help='Override retention', type=int)
+    parser.add_argument('--workers', default=5, help='Override worker instances', type=int)
+    parser.add_argument('--url', default='http://localhost:8000', help='Override backend URL')
     parser.add_argument('--verify', default=None, help='Override backend cert verification')
-    parser.add_argument('--timeout', default=None, help='Override backend timeout')
-    parser.add_argument('--cmd-timeout', default=None, help='Override CMD timeout')  # TODO
+    parser.add_argument('--timeout', default=120, help='Override backend timeout', type=int)
+    parser.add_argument('--cmd-timeout', default=120, help='Override CMD timeout', type=int)  # TODO
     parser.add_argument('--token', default=None, help='Override API token')
     args = parser.parse_args()
 
@@ -67,18 +67,17 @@ def main() -> int:
     # backend_verify = args.verify or backend_data.get("verify", True)
     # backend_timeout = args.timeout or backend_data.get("timeout", 10)
     # backend_token = os.getenv("NETDOC_TOKEN") or args.token or backend_data.get("token")
-
+    report_path = Path(output_dir) / Path(datetime.now().strftime('%Y%m%d-%H%M%S'))
     # Checking arguments
     if backend_url:
         # Using NetDoc backend
         logging.info('Running in client-server mode (backend_url=%s)', backend_url)
-        inventory = {}
+        inventory = inventory_file # TODO - should fetch inventory from backend instead of just reading it as JSON
     elif inventory_file:
         # Running stand-alone
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         inventory = inventory_file
-        now = datetime.now()
-        report_path = Path(output_dir) / Path(now.strftime('%Y%m%d-%H%M%S'))
+        
     else:
         logger.error('At least inventory_file or backend_url is required')
         sys.exit(1)
@@ -126,6 +125,11 @@ def main() -> int:
     #     )
 
     # Cleaming older outputs
+    cleanup_old_snapshots(output_dir, retention)
+
+    return 1 if failed_hosts else 0
+
+def cleanup_old_snapshots(output_dir, retention):
     if output_dir and retention:
         snapshot_dirs = sorted(
             [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and is_valid_dir(d)],
@@ -135,8 +139,6 @@ def main() -> int:
         for d in to_delete:
             logging.info("Deleted snapshot directory %s", d)
             shutil.rmtree(os.path.join(output_dir, d))
-
-    return 1 if failed_hosts else 0
 
 
 if __name__ == '__main__':
