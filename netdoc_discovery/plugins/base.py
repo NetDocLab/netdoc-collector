@@ -8,6 +8,7 @@ Every plugin must implement:
 """
 
 from abc import ABC, abstractmethod
+import logging
 import re
 import json
 from typing import Any
@@ -16,7 +17,10 @@ from textfsm.parser import TextFSMError
 from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
 from netmiko.utilities import get_structured_data
+from netdoc_sdk.models import DeviceData
 
+
+logger = logging.getLogger(__name__)
 
 class BasePlugin(ABC):
     def __init__(self, host_name: str, host_data: dict, report_path: Path | None):
@@ -35,7 +39,7 @@ class BasePlugin(ABC):
             self.report_path.mkdir(exist_ok=True, parents=True)
 
     @abstractmethod
-    def collect(self, task: Task) -> dict[str, str]:
+    def collect(self, task: Task) -> dict[str, Any]:
         """Collect data from devices and return result in NetDoc format."""
         ...
 
@@ -45,12 +49,32 @@ class BasePlugin(ABC):
         Build the finalNetDoc dict for this host.
 
         Args:
-            parsed: output of parse()
+            parsed_outputs: output of parse()
 
         Returns:
             Dict that will be written under this host's key in the output YAML.
         """
         ...
+
+    @abstractmethod
+    def to_netdok_obj(
+        self,
+        parsed_outputs: dict[str, Any],
+        raw_outputs: dict[str, str] | None = None,
+    ) -> DeviceData:
+        """
+        Build the DeviceData object for this host.
+
+        Args:
+            parsed_outputs: dictionary produced from the device config
+            raw_outputs: raw command outputs from the device
+
+        Returns:
+            Object that will be persisted in the DB
+        """
+        ...
+
+
 
     @staticmethod
     def slugify(text: str):
@@ -59,6 +83,62 @@ class BasePlugin(ABC):
         text = re.sub(r'[\s_-]+', '-', text)
         text = re.sub(r'^-+|-+$', '', text)
         return text
+
+    @staticmethod
+    def first_record(records: Any) -> dict[str, Any]:
+        if isinstance(records, list) and records and isinstance(records[0], dict):
+            return records[0]
+        return {}
+
+    @staticmethod
+    def safe_int(value: Any, default: int | None = None) -> int | None:
+        if value is None or value == '':
+            return default
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def safe_model(model_cls: Any, **kwargs: Any) -> Any | None:
+        try:
+            return model_cls(**kwargs)
+        except Exception as exc:
+            logger.debug('Skipping invalid %s data: %s', model_cls.__name__, exc)
+            return None
+
+    @classmethod
+    def expand_vlan_ids(cls, value: Any) -> list[int]:
+        vlan_ids: set[int] = set()
+
+        if isinstance(value, list):
+            for item in value:
+                vlan_ids.update(cls.expand_vlan_ids(item))
+            return sorted(vlan_ids)
+
+        if isinstance(value, int):
+            return [value] if 1 <= value <= 4094 else []
+
+        if not isinstance(value, str):
+            return []
+
+        for token in value.replace(' ', '').split(','):
+            if not token or token.lower() in {'none', 'all'}:
+                continue
+            if '-' in token:
+                start, end = token.split('-', 1)
+                start_id = cls.safe_int(start)
+                end_id = cls.safe_int(end)
+                if start_id is None or end_id is None or start_id > end_id:
+                    continue
+                vlan_ids.update(range(max(start_id, 1), min(end_id, 4094) + 1))
+                continue
+
+            vlan_id = cls.safe_int(token)
+            if vlan_id is not None and 1 <= vlan_id <= 4094:
+                vlan_ids.add(vlan_id)
+
+        return sorted(vlan_ids)
 
     @staticmethod
     def parse_netmiko_output(raw_output, platform, cmd) -> None | list:
@@ -94,18 +174,73 @@ class BasePlugin(ABC):
         with open(self.report_path / Path(f'{log_file}.raw'), 'w') as fh:
             fh.write(content)
 
-    def run_netmiko_cmd(self, task, platform, cmd) -> tuple[str, None | list]:
-        parsed_output = None
-        cmd_result: str = task.run(
-            task=netmiko_send_command,
-            command_string=cmd,
-            use_textfsm=False,
-        )
-        raw_output = cmd_result.result
-        parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
+    def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
+        
+        try:
+            parsed_output = None
+            cmd_result: str = task.run(
+                task=netmiko_send_command,
+                command_string=cmd,
+                read_timeout=240, #TODO - should use the cmd-timeout argument here
+                use_textfsm=False,
+            )
+            logger.debug(f"Raw output for command '{cmd}' on {self.host_name}: {cmd_result.result}")
+        except Exception as e:
+            self.write_output(f"Error running command: {e}", cmd)
+            logger.error(f"Error running command '{cmd}' on {self.host_name}: {e}")
+            raise Exception(f"Error running command '{cmd}' on {self.host_name}: {e}")
+
+        try:
+            raw_output = cmd_result.result
+            parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
+        except Exception as e:
+            self.write_output(f"Error parsing command '{cmd}' output on {self.host_name}: {e}", cmd)
+            logger.error(f"Error parsing command '{cmd}' output on {self.host_name}: {e}")
 
         # Dump output files
         self.write_output(raw_output, cmd)
         self.write_output(parsed_output, cmd)
-
         return raw_output, parsed_output
+        
+    @classmethod
+    def _speed_to_mbps(cls, *values: Any) -> int | None:
+        for value in values:
+            if not value:
+                continue
+            value_text = str(value).strip().lower()
+            match = re.search(r'(\d+(?:\.\d+)?)', value_text)
+            if not match:
+                continue
+
+            speed = float(match.group(1))
+            if 'gb' in value_text or 'gbit' in value_text:
+                return int(round(speed * 1000))
+            if 'mb' in value_text or 'mbit' in value_text:
+                return int(round(speed))
+            if 'kb' in value_text or 'kbit' in value_text:
+                return max(int(round(speed / 1000)), 1)
+            if 'bit' in value_text:
+                return max(int(round(speed / 1_000_000)), 1)
+
+        return None
+    
+    @classmethod
+    def _uptime_to_seconds(cls, uptime: Any) -> int:
+        if not uptime:
+            return 0
+
+        unit_seconds = {
+            'year': 365 * 24 * 60 * 60,
+            'week': 7 * 24 * 60 * 60,
+            'day': 24 * 60 * 60,
+            'hour': 60 * 60,
+            'minute': 60,
+            'second': 1,
+        }
+        total = 0
+        for amount, unit in re.findall(r'(\d+)\s*([A-Za-z]+)', str(uptime)):
+            for unit_name, multiplier in unit_seconds.items():
+                if unit.lower().startswith(unit_name):
+                    total += int(amount) * multiplier
+                    break
+        return total

@@ -37,6 +37,8 @@ pytest = "^9.0.3"
 pyyaml = "^6.0.3"
 tomlkit = "^0.13.3"
 
+# SDK
+netdoc-sdk = {path = "../netdoc/netdoc-sdk", develop = true}
 
 [tool.black]
 exclude = '''

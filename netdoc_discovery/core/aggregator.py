@@ -68,7 +68,7 @@ def aggregate_and_write(results: AggregatedResult, output_path: str) -> dict[str
             device_data.append(
                 {
                     "name": host_name,
-                    "result": task_result,
+                    "result": task_result['netdoc_output'],
                 }
             )
         else:
