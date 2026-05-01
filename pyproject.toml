@@ -14,7 +14,8 @@ dependencies = [
     "nornir (>=3.5.0,<4.0.0)",
     "nornir-netmiko (>=1.0.1,<2.0.0)",
     "pyyaml (>=6.0.3,<7.0.0)",
-    "textfsm (>=2.1.0,<3.0.0)"
+    "textfsm (>=2.1.0,<3.0.0)",
+    "websockets (>=16.0,<17.0)"
 ]
 
 [project.scripts]
