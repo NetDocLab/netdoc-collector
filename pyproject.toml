@@ -1,14 +1,14 @@
 [project]
-name = "netdoc-discovery"
+name = "netdoc-collector"
 version = "0.1.0"
-description = "NetDoc - discovery module"
+description = "NetDoc - collector module"
 authors = [
     {name = "Andrea Cavazzini",email = "cavazzini.andrea@gmail.com"},
     {name = "Andrea Dainese",email = "andrea.dainese@gmail.com"}
 ]
 license = "LICENSE"
 readme = "README.md"
-requires-python = ">=3.12,<4.0"
+requires-python = ">=3.12,<3.15"
 dependencies = [
     "netmiko (>=4.6.0,<5.0.0)",
     "nornir (>=3.5.0,<4.0.0)",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-netdoc-discovery = "netdoc_discovery.main:main"
+netdoc-collector = "netdoc_collector.main:main"
 
 
 [build-system]
@@ -28,7 +28,10 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry]
-name = "netdoc-discovery"
+name = "netdoc-collector"
+packages = [
+    {include = "netdoc_collector", from = "src"}
+]
 
 [tool.poetry.group.dev.dependencies]
 cyclonedx-bom = "^7.2.1"

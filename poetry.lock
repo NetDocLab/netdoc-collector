@@ -1001,7 +1001,7 @@ name = "netdoc-sdk"
 version = "0.1.0"
 description = "Network Documentation Platform - SDK"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.12,<3.15"
 groups = ["dev"]
 files = []
 develop = true
@@ -1010,12 +1010,6 @@ develop = true
 anyio = ">=4.2"
 httpx = ">=0.26"
 pydantic = ">=2.5"
-
-[package.extras]
-dev = ["mypy (>=1.7)", "pytest (>=7.4)", "pytest-asyncio (>=0.23)", "pytest-httpx (>=0.28)", "ruff (>=0.1)"]
-napalm = ["napalm (>=4.1)"]
-netmiko = ["netmiko (>=4.3)"]
-nornir = ["nornir (>=3.4)", "nornir-napalm (>=0.4)", "nornir-netmiko (>=1.0)"]
 
 [package.source]
 type = "directory"
@@ -2094,5 +2088,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<4.0"
-content-hash = "af8b0dd93b3c9e683258a197b81d66cc827702a9146685ffb281494c55fe7df9"
+python-versions = ">=3.12,<3.15"
+content-hash = "4931cb9fbc9deb0280c6cfd648d5323ab7e3b2f38243fff27883ebc73d8e6026"
