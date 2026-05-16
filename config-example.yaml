@@ -7,7 +7,7 @@ workers: 5
 inventory: ./inventory.json
 # Managed mode configuration
 backend:
-  url: http://localhost:8000/api/v1
+  url: http://localhost:8000/
   verify: true
   timeout: 120
   token: 725c907e5f00bd88fe4e03bfe6f02264561eb942

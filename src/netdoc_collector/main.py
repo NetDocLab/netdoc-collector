@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """NetDoc discoverer."""
 
+import getpass
 import asyncio
 import os
 import shutil
@@ -14,13 +15,17 @@ from pathlib import Path
 import websockets
 import yaml
 import json
+from netdoc_sdk.client import NetDocClient
+import netdoc_sdk
 import netdoc_collector
 from netdoc_collector.core.mode import managed_mode
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
-# from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
-# from netdoc_collector.core.tasks import discovery_task
+from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
+
+from netdoc_collector.core.tasks import discovery_task
+
 # from netdoc_collector.core.aggregator import aggregate_and_write
 
 REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
@@ -37,8 +42,10 @@ logger = logging.getLogger(__name__)
 def load_config(path: str) -> dict:
     try:
         with open(path) as f:
+            logging.info('Loading configuration from %s', path)
             return yaml.safe_load(f)
     except FileNotFoundError:
+        logging.warning('Cannot load configuration from %s', path)
         pass
     return {}
 
@@ -51,8 +58,8 @@ def is_valid_dir(name):
         return False
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description='NetDoc discoverer')
+async def main() -> int:
+    parser = argparse.ArgumentParser(description='NetDoc collector')
 
     # Stand-alone + managed mode
     parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
@@ -87,6 +94,7 @@ def main() -> int:
         root_logger.addHandler(console_handler)
         root_logger.setLevel(logging.DEBUG)
 
+    # TODO: default on args are always set. Should remove defaults, load from CFG, finally set a default
     cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout')
     num_workers = args.workers or cfg.get('workers')
     output_dir = args.output or cfg.get('output', './output')
@@ -97,7 +105,8 @@ def main() -> int:
     inventory_file = args.inventory or cfg.get('inventory', None)
 
     # Reading arguments: managed mode
-    agent_id = f"{uuid.uuid4()}@{socket.gethostname()}"
+    collector_name = f"{getpass.getuser()}@{socket.getfqdn()}"
+    collector_version = "0.0.1-TODO"
     backend_data = cfg.get('backend', {})
     backend_timeout = args.timeout or backend_data.get("timeout")
     backend_token = os.getenv("NETDOC_TOKEN") or args.token or backend_data.get("token")
@@ -107,17 +116,30 @@ def main() -> int:
     # Checking arguments
     if backend_url and backend_token:
         # Running in managed mode
-        logging.info('Running in managed mode (backend_url=%s, agent_id=%s)', backend_url, agent_id)
-        return asyncio.run(
-            managed_mode(
-                backend_url=backend_url,
-                backend_token=backend_token,
-                backend_verify=backend_verify,
-                agent_id=agent_id,
-                report_path=report_path,
-                num_workers=num_workers,
-            )
-        )
+        logging.info('Running in managed mode (backend_url=%s, collector_name=%s)', backend_url, collector_name)
+        client = NetDocClient(base_url=backend_url, token=backend_token)
+
+        # Heartbeat (login test)
+        try:
+            await client.collectors_heartbeat_create(data={"name": collector_name, "version": collector_version})
+            logging.info('Collector is logged in')
+        except netdoc_sdk.exceptions.ConnectionError as exc:
+            logging.error(exc)
+            return 1
+
+        # Claim
+        job = await client.discovery_jobs_claim_create()
+        if not job:
+            # Nothing to do
+            logging.info("No job to claim")
+            return 0
+
+        job_id = job.id
+        idempotency_key = job.idempotency_key
+        claim_token = job.claim_token
+        inventory = job.inventory
+        logging.info("Claimed job %s on %s devices", job_id, len(job.inventory["all"]["hosts"]))
+
     elif inventory_file:
         # Running in stand-alone mode
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
@@ -130,13 +152,6 @@ def main() -> int:
     else:
         logger.error('At least inventory_file or backend_url and backend_token are required')
         return 1
-
-    # Setting NET_TEXTFSM directory
-    ntc_template_path = Path(netdoc_collector.__file__).parent / Path('ntc_templates')
-    logging.info('Using NTC templates from %s', ntc_template_path)
-    os.environ["NET_TEXTFSM"] = str(ntc_template_path)
-
-    return 0
 
     # Initialising Nornir
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
@@ -163,7 +178,7 @@ def main() -> int:
     logger.info('Discovery completed (failed on %i hosts)', failed_hosts)
 
     # Dump results
-    netdoc_results = aggregate_and_write(results, report_path)
+    # netdoc_results = aggregate_and_write(results, report_path)
 
     # if args.api_token:
     #     from netdoc_collector.api_sender import send_to_api
@@ -193,5 +208,9 @@ def cleanup_old_snapshots(output_dir, retention):
             shutil.rmtree(os.path.join(output_dir, d))
 
 
+def entrypoint() -> int:
+    return asyncio.run(main())
+
+
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(asyncio.run(main()))

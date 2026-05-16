@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-netdoc-collector = "netdoc_collector.main:main"
+netdoc-collector = "netdoc_collector.main:entrypoint"
 
 
 [build-system]

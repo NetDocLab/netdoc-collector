@@ -4,18 +4,19 @@ from typing import Any
 
 from nornir.core.task import Task
 from netdoc_sdk.models import (
-    ARPEntryData,
-    DeviceData,
-    InterfaceData,
-    InterfaceMode,
-    InterfaceType,
-    IPAddressData,
-    LLDPNeighborData,
-    MACEntryData,
-    RouteData,
-    RouteProtocol,
-    VLANData,
-    VRFData,
+    # ARPEntryData,
+    # DeviceData,
+    RawOutput,
+    # InterfaceData,
+    # InterfaceMode,
+    # InterfaceType,
+    # IPAddressData,
+    # LLDPNeighborData,
+    # MACEntryData,
+    # RouteData,
+    # RouteProtocol,
+    # VLANData,
+    # VRFData,
 )
 
 from .base import BasePlugin
@@ -45,7 +46,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             "show ip ospf neighbor",
             "show ip route vrf all",
             "show lldp neighbors detail",
-            #"show logging",
+            # "show logging",
             "show mac address-table dynamic",
             "show port-channel summary",
             "show running-config",
@@ -105,119 +106,114 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
 
         return netdoc_output
 
-    
-    
+    # @staticmethod
+    # def _interface_type(name: str, hardware_type: str = '') -> InterfaceType:
+    #     interface_name = name.lower()
+    #     hardware = hardware_type.lower()
 
-    @staticmethod
-    def _interface_type(name: str, hardware_type: str = '') -> InterfaceType:
-        interface_name = name.lower()
-        hardware = hardware_type.lower()
+    #     if interface_name.startswith('mgmt'):
+    #         return InterfaceType.MANAGEMENT
+    #     if interface_name.startswith('loopback'):
+    #         return InterfaceType.LOOPBACK
+    #     if interface_name.startswith('vlan'):
+    #         return InterfaceType.VLAN
+    #     if interface_name.startswith('port-channel') or re.match(r'^po\d+', interface_name):
+    #         return InterfaceType.PORT_CHANNEL
+    #     if interface_name.startswith('tunnel') or interface_name.startswith('nve'):
+    #         return InterfaceType.TUNNEL
+    #     if interface_name.startswith(('ethernet', 'eth')) or 'ethernet' in hardware:
+    #         return InterfaceType.ETHERNET
+    #     return InterfaceType.OTHER
 
-        if interface_name.startswith('mgmt'):
-            return InterfaceType.MANAGEMENT
-        if interface_name.startswith('loopback'):
-            return InterfaceType.LOOPBACK
-        if interface_name.startswith('vlan'):
-            return InterfaceType.VLAN
-        if interface_name.startswith('port-channel') or re.match(r'^po\d+', interface_name):
-            return InterfaceType.PORT_CHANNEL
-        if interface_name.startswith('tunnel') or interface_name.startswith('nve'):
-            return InterfaceType.TUNNEL
-        if interface_name.startswith(('ethernet', 'eth')) or 'ethernet' in hardware:
-            return InterfaceType.ETHERNET
-        return InterfaceType.OTHER
+    # @staticmethod
+    # def _interface_mode(
+    #     interface_type: InterfaceType,
+    #     switchport_data: dict[str, Any],
+    #     interface_data: dict[str, Any],
+    # ) -> InterfaceMode:
+    #     if interface_type == InterfaceType.TUNNEL:
+    #         return InterfaceMode.TUNNEL
 
-    @staticmethod
-    def _interface_mode(
-        interface_type: InterfaceType,
-        switchport_data: dict[str, Any],
-        interface_data: dict[str, Any],
-    ) -> InterfaceMode:
-        if interface_type == InterfaceType.TUNNEL:
-            return InterfaceMode.TUNNEL
+    #     switchport = str(switchport_data.get('switchport', '')).lower()
+    #     mode = str(switchport_data.get('mode') or interface_data.get('mode') or '').lower()
 
-        switchport = str(switchport_data.get('switchport', '')).lower()
-        mode = str(
-            switchport_data.get('mode') or interface_data.get('mode') or ''
-        ).lower()
+    #     if switchport == 'disabled' or 'routed' in mode:
+    #         return InterfaceMode.ROUTED
+    #     if 'trunk' in mode:
+    #         return InterfaceMode.TRUNK
+    #     return InterfaceMode.ACCESS
 
-        if switchport == 'disabled' or 'routed' in mode:
-            return InterfaceMode.ROUTED
-        if 'trunk' in mode:
-            return InterfaceMode.TRUNK
-        return InterfaceMode.ACCESS
+    # @staticmethod
+    # def _route_protocol(protocol: Any) -> RouteProtocol:
+    #     protocol_text = str(protocol or '').lower()
 
-    @staticmethod
-    def _route_protocol(protocol: Any) -> RouteProtocol:
-        protocol_text = str(protocol or '').lower()
+    #     if protocol_text in {'direct', 'local', 'connected'}:
+    #         return RouteProtocol.CONNECTED
+    #     if 'bgp' in protocol_text:
+    #         return RouteProtocol.BGP
+    #     if 'ospf' in protocol_text:
+    #         return RouteProtocol.OSPF
+    #     if 'eigrp' in protocol_text:
+    #         return RouteProtocol.EIGRP
+    #     if protocol_text == 'rip':
+    #         return RouteProtocol.RIP
+    #     if 'isis' in protocol_text or 'is-is' in protocol_text:
+    #         return RouteProtocol.ISIS
+    #     if protocol_text == 'static':
+    #         return RouteProtocol.STATIC
+    #     return RouteProtocol.OTHER
 
-        if protocol_text in {'direct', 'local', 'connected'}:
-            return RouteProtocol.CONNECTED
-        if 'bgp' in protocol_text:
-            return RouteProtocol.BGP
-        if 'ospf' in protocol_text:
-            return RouteProtocol.OSPF
-        if 'eigrp' in protocol_text:
-            return RouteProtocol.EIGRP
-        if protocol_text == 'rip':
-            return RouteProtocol.RIP
-        if 'isis' in protocol_text or 'is-is' in protocol_text:
-            return RouteProtocol.ISIS
-        if protocol_text == 'static':
-            return RouteProtocol.STATIC
-        return RouteProtocol.OTHER
+    # @classmethod
+    # def _cidr_address(cls, ip_address: Any, subnet: Any = '', prefix: Any = '') -> str:
+    #     if not ip_address:
+    #         return ''
 
-    @classmethod
-    def _cidr_address(cls, ip_address: Any, subnet: Any = '', prefix: Any = '') -> str:
-        if not ip_address:
-            return ''
+    #     address = str(ip_address).strip()
+    #     if not address:
+    #         return ''
+    #     if '/' in address:
+    #         return address
 
-        address = str(ip_address).strip()
-        if not address:
-            return ''
-        if '/' in address:
-            return address
+    #     prefix_length = cls.safe_int(prefix)
+    #     if prefix_length is None and subnet:
+    #         try:
+    #             prefix_length = ip_network(str(subnet).strip(), strict=False).prefixlen
+    #         except ValueError:
+    #             prefix_length = None
 
-        prefix_length = cls.safe_int(prefix)
-        if prefix_length is None and subnet:
-            try:
-                prefix_length = ip_network(str(subnet).strip(), strict=False).prefixlen
-            except ValueError:
-                prefix_length = None
+    #     if prefix_length is None:
+    #         return address
+    #     return f'{address}/{prefix_length}'
 
-        if prefix_length is None:
-            return address
-        return f'{address}/{prefix_length}'
+    # @staticmethod
+    # def _vrf_from_command(command: str) -> str:
+    #     match = re.search(r'\bvrf\s+(.+)$', command)
+    #     if not match:
+    #         return ''
+    #     return match.group(1).strip()
 
-    @staticmethod
-    def _vrf_from_command(command: str) -> str:
-        match = re.search(r'\bvrf\s+(.+)$', command)
-        if not match:
-            return ''
-        return match.group(1).strip()
+    # @staticmethod
+    # def _capabilities(value: Any) -> list[str]:
+    #     if isinstance(value, list):
+    #         return [str(item).strip() for item in value if str(item).strip()]
+    #     if not value:
+    #         return []
+    #     return [item for item in re.split(r'[\s,]+', str(value).strip()) if item]
 
-    @staticmethod
-    def _capabilities(value: Any) -> list[str]:
-        if isinstance(value, list):
-            return [str(item).strip() for item in value if str(item).strip()]
-        if not value:
-            return []
-        return [item for item in re.split(r'[\s,]+', str(value).strip()) if item]
-
-    @staticmethod
-    def _tag_to_int(value: Any) -> int | None:
-        if not value:
-            return None
-        match = re.search(r'\d+', str(value))
-        if not match:
-            return None
-        return int(match.group(0))
+    # @staticmethod
+    # def _tag_to_int(value: Any) -> int | None:
+    #     if not value:
+    #         return None
+    #     match = re.search(r'\d+', str(value))
+    #     if not match:
+    #         return None
+    #     return int(match.group(0))
 
     def to_netdok_obj(
         self,
         parsed_outputs: dict[str, Any],
         raw_outputs: dict[str, str] | None = None,
-    ) -> DeviceData:
+    ) -> RawOutput:
         """Convert parsed NX-OS outputs to a DeviceData object for persistence."""
         parsed_outputs = parsed_outputs or {}
         raw_outputs = raw_outputs if isinstance(raw_outputs, dict) else {}
@@ -226,21 +222,11 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
         show_hostname = self.first_record(parsed_outputs.get('show hostname'))
         inventory = parsed_outputs.get('show inventory', [])
         chassis = next(
-            (
-                item
-                for item in inventory
-                if isinstance(item, dict)
-                and str(item.get('name', '')).lower() == 'chassis'
-            ),
+            (item for item in inventory if isinstance(item, dict) and str(item.get('name', '')).lower() == 'chassis'),
             {},
         )
 
-        hostname = (
-            show_version.get('hostname')
-            or show_hostname.get('hostname')
-            or self.host_name
-            or 'unknown'
-        )
+        hostname = show_version.get('hostname') or show_hostname.get('hostname') or self.host_name or 'unknown'
         model = chassis.get('pid') or show_version.get('platform') or ''
         serial_number = show_version.get('serial') or chassis.get('sn') or ''
 
@@ -272,7 +258,6 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             )
             if vrf:
                 vrfs.append(vrf)
-
 
         # Interfaces
         switchports = {
@@ -309,9 +294,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
                 native_vlan_id = access_vlan_id or native_vlan_id
                 allowed_vlan_ids = [native_vlan_id] if native_vlan_id else []
             elif mode == InterfaceMode.TRUNK:
-                allowed_vlan_ids = self.expand_vlan_ids(
-                    switchport_data.get('trunking_vlans')
-                )
+                allowed_vlan_ids = self.expand_vlan_ids(switchport_data.get('trunking_vlans'))
             else:
                 native_vlan_id = None
                 allowed_vlan_ids = []
@@ -336,7 +319,6 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             if interface:
                 interfaces.append(interface)
                 interface_names.add(interface_name)
-
 
         # IP Addresses
         ip_addresses: list[IPAddressData] = []
@@ -363,6 +345,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             if ip_address:
                 ip_addresses.append(ip_address)
                 seen_ip_addresses.add(key)
+
         # Collecting IP addresses from "show ip interface" outputs
         for command, command_output in parsed_outputs.items():
             if not command.startswith('show ip interface'):
@@ -395,11 +378,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
                 secondary_addresses = interface_data.get('secondary_ip_address') or []
                 secondary_subnets = interface_data.get('secondary_ip_subnet') or []
                 for index, secondary_address in enumerate(secondary_addresses):
-                    secondary_subnet = (
-                        secondary_subnets[index]
-                        if index < len(secondary_subnets)
-                        else ''
-                    )
+                    secondary_subnet = secondary_subnets[index] if index < len(secondary_subnets) else ''
                     address = self._cidr_address(
                         secondary_address,
                         subnet=secondary_subnet,
@@ -415,8 +394,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             if not address:
                 continue
             has_address = any(
-                item.interface_name == interface_name and item.address == address
-                for item in ip_addresses
+                item.interface_name == interface_name and item.address == address for item in ip_addresses
             )
             if not has_address:
                 add_ip_address(interface_name, address)
@@ -445,7 +423,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             if route:
                 routes.append(route)
 
-        #ARP entries
+        # ARP entries
         arp_entries: list[ARPEntryData] = []
         for command, command_output in parsed_outputs.items():
             if not command.startswith('show ip arp'):
@@ -453,11 +431,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
 
             vrf_name = self._vrf_from_command(command)
             for arp_data in command_output:
-                if not (
-                    arp_data.get('ip_address')
-                    and arp_data.get('mac_address')
-                    and arp_data.get('interface')
-                ):
+                if not (arp_data.get('ip_address') and arp_data.get('mac_address') and arp_data.get('interface')):
                     continue
                 arp_entry = self.safe_model(
                     ARPEntryData,
@@ -476,11 +450,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
             if vlan_id is None or not mac_data.get('mac_address'):
                 continue
 
-            ports = [
-                port.strip()
-                for port in str(mac_data.get('ports') or '').split(',')
-                if port.strip()
-            ]
+            ports = [port.strip() for port in str(mac_data.get('ports') or '').split(',') if port.strip()]
             if not ports:
                 continue
             for port in ports:
@@ -540,7 +510,7 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
         )
 
         return device or DeviceData(hostname=hostname, vendor='cisco', platform='nxos')
-        
+
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
         netmiko_device_type = host.data.get('netmiko_device_type')
@@ -570,4 +540,4 @@ class NetmikoCiscoNXOSPlugin(BasePlugin):
         device = self.to_netdok_obj(parsed_outputs, raw_outputs)
         self.write_output(netdoc_output, 'netdoc-device-report')
 
-        return { "netdoc_output": netdoc_output, "device": device }
+        return {"netdoc_output": netdoc_output, "device": device}

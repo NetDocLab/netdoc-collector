@@ -17,10 +17,10 @@ from textfsm.parser import TextFSMError
 from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
 from netmiko.utilities import get_structured_data
-from netdoc_sdk.models import DeviceData
-
+from netdoc_sdk.models import RawOutput
 
 logger = logging.getLogger(__name__)
+
 
 class BasePlugin(ABC):
     def __init__(self, host_name: str, host_data: dict, report_path: Path | None):
@@ -61,7 +61,7 @@ class BasePlugin(ABC):
         self,
         parsed_outputs: dict[str, Any],
         raw_outputs: dict[str, str] | None = None,
-    ) -> DeviceData:
+    ) -> RawOutput:
         """
         Build the DeviceData object for this host.
 
@@ -73,8 +73,6 @@ class BasePlugin(ABC):
             Object that will be persisted in the DB
         """
         ...
-
-
 
     @staticmethod
     def slugify(text: str):
@@ -143,9 +141,7 @@ class BasePlugin(ABC):
     @staticmethod
     def parse_netmiko_output(raw_output, platform, cmd) -> None | list:
         try:
-            parsed_output: list = get_structured_data(
-                raw_output, platform=platform, command=cmd
-            )
+            parsed_output: list = get_structured_data(raw_output, platform=platform, command=cmd)
             if isinstance(parsed_output, list):
                 # Valid output is a list
                 return parsed_output
@@ -164,9 +160,7 @@ class BasePlugin(ABC):
         log_file = self.slugify(log)
         if isinstance(content, dict) or isinstance(content, list):
             # Write a JSON file
-            with open(
-                self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8'
-            ) as fh:
+            with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:
                 json.dump(content, fh, indent=2)
             return
 
@@ -175,13 +169,13 @@ class BasePlugin(ABC):
             fh.write(content)
 
     def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
-        
+
         try:
             parsed_output = None
             cmd_result: str = task.run(
                 task=netmiko_send_command,
                 command_string=cmd,
-                read_timeout=240, #TODO - should use the cmd-timeout argument here
+                read_timeout=240,  # TODO - should use the cmd-timeout argument here
                 use_textfsm=False,
             )
             logger.debug(f"Raw output for command '{cmd}' on {self.host_name}: {cmd_result.result}")
@@ -201,7 +195,7 @@ class BasePlugin(ABC):
         self.write_output(raw_output, cmd)
         self.write_output(parsed_output, cmd)
         return raw_output, parsed_output
-        
+
     @classmethod
     def _speed_to_mbps(cls, *values: Any) -> int | None:
         for value in values:
@@ -223,7 +217,7 @@ class BasePlugin(ABC):
                 return max(int(round(speed / 1_000_000)), 1)
 
         return None
-    
+
     @classmethod
     def _uptime_to_seconds(cls, uptime: Any) -> int:
         if not uptime:
