@@ -62,21 +62,21 @@ async def main() -> int:
     parser = argparse.ArgumentParser(description='NetDoc collector')
 
     # Stand-alone + managed mode
-    parser.add_argument('--config', default='config.yaml', help='Path to config.yaml')
-    parser.add_argument('--output', default='./output', help='Override output directory')
-    parser.add_argument('--cmd-timeout', default=120, help='Override CMD timeout', type=int)  # TODO
-    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
-    parser.add_argument('--retention', default=5, help='Override retention', type=int)
-    parser.add_argument('--workers', default=5, help='Override worker instances', type=int)
+    parser.add_argument('-c', '--config', default='config.yaml', help='Path to config.yaml')
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument('-o', '--output', help='Override output directory')
+    parser.add_argument('-r', '--retention', help='Override retention', type=int)
+    parser.add_argument('-t', '--cmd-timeout', help='Override CMD timeout', type=int)  # TODO: not used yet
+    parser.add_argument('-w', '--workers', help='Override worker instances', type=int)
 
     # Stand-alone mode
-    parser.add_argument('--inventory', default='inventory.json', help='Override local inventory file')
+    parser.add_argument('-i', '--inventory', help='Override local inventory file')
 
     # Managed mode
-    parser.add_argument('--url', default='http://localhost:8000', help='Override backend URL')
-    parser.add_argument('--verify', default=None, help='Override backend cert verification')
-    parser.add_argument('--timeout', default=120, help='Override backend timeout', type=int)
+    parser.add_argument('-T', '--timeout', help='Override backend timeout', type=int)
+    parser.add_argument('-u', '--url', help='Override backend URL')
     parser.add_argument('--token', default=None, help='Override API token')
+    parser.add_argument('--verify', default=None, help='Override backend cert verification')
 
     args = parser.parse_args()
 
@@ -94,23 +94,26 @@ async def main() -> int:
         root_logger.addHandler(console_handler)
         root_logger.setLevel(logging.DEBUG)
 
-    # TODO: default on args are always set. Should remove defaults, load from CFG, finally set a default
-    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout')
-    num_workers = args.workers or cfg.get('workers')
+    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout') or 120
+    num_workers = args.workers or cfg.get('workers') or 5
     output_dir = args.output or cfg.get('output', './output')
-    retention = args.retention or cfg.get('retention')
+    retention = args.retention or cfg.get('retention') or 5
     report_path = Path(output_dir) / Path(datetime.now().strftime(REPORT_PATH_FMT))
 
     # Reading arguments: stand-alone mode
-    inventory_file = args.inventory or cfg.get('inventory', None)
+    inventory_file = args.inventory or cfg.get('inventory', 'inventory.json')
 
     # Reading arguments: managed mode
+    claim_token = None
+    client = None
     collector_name = f"{getpass.getuser()}@{socket.getfqdn()}"
-    collector_version = "0.0.1-TODO"
+    collector_version = "0.0.1-TODO"  # TODO get version from class
+    idempotency_key = None
+    job_id = None
     backend_data = cfg.get('backend', {})
-    backend_timeout = args.timeout or backend_data.get("timeout")
+    backend_timeout = args.timeout or backend_data.get("timeout") or 120
     backend_token = os.getenv("NETDOC_TOKEN") or args.token or backend_data.get("token")
-    backend_url = args.url or backend_data.get('url')
+    backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
     backend_verify = args.verify or backend_data.get("verify", True)
 
     # Checking arguments
@@ -171,9 +174,15 @@ async def main() -> int:
     )
 
     # Running discovery tasks
-    # nr = nr.filter(F(hostname="172.25.10.2"))
-    logger.info('Running discovery on %d host(s)', len(nr.inventory.hosts))
-    results = nr.run(task=discovery_task, report_path=report_path)
+    logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
+    results = nr.run(
+        task=discovery_task,
+        report_path=report_path,
+        claim_token=claim_token,
+        client=client,
+        idempotency_key=idempotency_key,
+        job_id=job_id,
+    )
     failed_hosts = sum(1 for r in results.values() if r.failed)
     logger.info('Discovery completed (failed on %i hosts)', failed_hosts)
 

@@ -17,22 +17,29 @@ from nornir.core.task import Task, Result
 from netdoc_collector.plugins.dispatcher import get_plugin
 
 
-def discovery_task(task: Task, report_path: Path) -> Result:
+def discovery_task(
+    task: Task,
+    report_path: Path,
+    claim_token=None,
+    client=None,
+    idempotency_key=None,
+    job_id=None,
+) -> Result:
     host = task.host
     netdoc_plugin = host.data.get('netdoc_plugin')
 
     if not netdoc_plugin:
         return Result(
+            exception=ValueError(f"Host '{host.name}' is missing 'netdoc_plugin' in host.data"),
+            failed=True,
             host=host,
             result=None,
-            failed=True,
-            exception=ValueError(f"Host '{host.name}' is missing 'netdoc_plugin' in host.data"),
         )
 
     plugin = get_plugin(
-        plugin=netdoc_plugin,
-        host_name=host.name,
         host_data=dict(host.data),
+        host_name=host.name,
+        plugin=netdoc_plugin,
         report_path=report_path,
     )
 
