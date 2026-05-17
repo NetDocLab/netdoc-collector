@@ -58,9 +58,7 @@ class NetDocAnsibleInventory:
         groups['all'] = Group('all')
 
         # Load hosts
-        for inventory_hostname, host_data in self.inventory['_meta'][
-            'hostvars'
-        ].items():
+        for inventory_hostname, host_data in self.inventory['_meta']['hostvars'].items():
             #     # for discoverable in [discoverables]:
             #     # credential = discoverable.credential
             #     # Add hosts discoverable via Netmiko

@@ -44,7 +44,7 @@ PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
 }
 
 
-def get_plugin(plugin: str, host_name: str, host_data: dict, report_path=None) -> BasePlugin:
+def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
     """
     Instantiate and return the correct plugin for a given vendor/platform.
 
@@ -65,4 +65,4 @@ def get_plugin(plugin: str, host_name: str, host_data: dict, report_path=None) -
             logging.debug('Registered plugin %s=%s', v, p)
         raise ValueError(f"No plugin registered for plugin='{plugin}'")
 
-    return plugin_cls(host_name=host_name, host_data=host_data, report_path=report_path)
+    return plugin_cls(*args, **kwargs)

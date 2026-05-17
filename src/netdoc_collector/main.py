@@ -8,17 +8,13 @@ import shutil
 import argparse
 import logging
 import sys
-import uuid
 import socket
 from datetime import datetime
 from pathlib import Path
-import websockets
 import yaml
 import json
 from netdoc_sdk.client import NetDocClient
 import netdoc_sdk
-import netdoc_collector
-from netdoc_collector.core.mode import managed_mode
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
@@ -178,6 +174,7 @@ async def main() -> int:
     results = nr.run(
         task=discovery_task,
         report_path=report_path,
+        cmd_timeout=cmd_timeout,
         claim_token=claim_token,
         client=client,
         idempotency_key=idempotency_key,

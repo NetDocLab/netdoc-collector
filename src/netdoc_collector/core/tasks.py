@@ -23,6 +23,7 @@ def discovery_task(
     claim_token=None,
     client=None,
     idempotency_key=None,
+    cmd_timeout=None,
     job_id=None,
 ) -> Result:
     host = task.host
@@ -41,6 +42,8 @@ def discovery_task(
         host_name=host.name,
         plugin=netdoc_plugin,
         report_path=report_path,
+        claim_token=claim_token,
+        cmd_timeout=cmd_timeout,
     )
 
     netdoc_output = plugin.collect(task)
