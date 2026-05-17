@@ -178,7 +178,9 @@ async def main() -> int:
     if managed_mode:
         try:
             await client.discovery_jobs_complete_create(
-                id=job_id, claim_token=claim_token, data={"status": "completed", "messages": log_list_handler.records}
+                id=job_id,
+                claim_token=claim_token,
+                data={"status": "completed", "log_messages": log_list_handler.records},
             )
             logging.info(f"Job {job_id} is completed")
         except ValidationError as exc:
