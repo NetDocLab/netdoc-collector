@@ -1,6 +1,6 @@
 from netdoc_sdk.models import InterfaceMode, InterfaceType, RouteProtocol
 
-from netdoc_discovery.plugins.netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
+from netdoc_collector.plugins.netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
 
 
 def test_to_netdok_obj_populates_device_data():
@@ -19,9 +19,7 @@ def test_to_netdok_obj_populates_device_data():
                 'uptime': '1 day(s), 2 hour(s), 3 minute(s), 4 second(s)',
             }
         ],
-        'show inventory': [
-            {'name': 'Chassis', 'pid': 'N9K-C9336C-FX2', 'sn': 'CHASSIS123'}
-        ],
+        'show inventory': [{'name': 'Chassis', 'pid': 'N9K-C9336C-FX2', 'sn': 'CHASSIS123'}],
         'show vlan': [{'vlan_id': '10', 'vlan_name': 'USERS', 'status': 'active'}],
         'show vrf': [{'name': 'default', 'reason': '--'}],
         'show interface': [
@@ -146,12 +144,8 @@ def test_to_netdok_obj_handles_missing_and_invalid_data():
         'show vrf': [{'reason': 'missing name'}],
         'show interface': [{'description': 'missing interface name'}],
         'show ip route vrf all': [{'network': '10.0.0.0'}],
-        'show ip arp vrf default': [
-            {'ip_address': '', 'mac_address': '0000.1111.2222', 'interface': ''}
-        ],
-        'show mac address-table dynamic': [
-            {'vlan_id': 'bad', 'mac_address': '0000.1111.2222', 'ports': 'Eth1/1'}
-        ],
+        'show ip arp vrf default': [{'ip_address': '', 'mac_address': '0000.1111.2222', 'interface': ''}],
+        'show mac address-table dynamic': [{'vlan_id': 'bad', 'mac_address': '0000.1111.2222', 'ports': 'Eth1/1'}],
         'show lldp neighbors detail': [{'local_interface': 'Eth1/1'}],
     }
 

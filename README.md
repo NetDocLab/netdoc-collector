@@ -1,4 +1,4 @@
-# NetDoc - discovery module
+# NetDoc - collector module
 
 ## Config file
 

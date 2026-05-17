@@ -1,0 +1,13 @@
+# NetDoc Discovery configuration file
+cmd_timeout: 120
+output: ./output
+retention: 5
+workers: 5
+# Stand-alone mode configuration
+inventory: ./inventory.json
+# Managed mode configuration
+backend:
+  url: http://localhost:8000/
+  verify: true
+  timeout: 120
+  token: 725c907e5f00bd88fe4e03bfe6f02264561eb942
