@@ -44,6 +44,8 @@ def discovery_task(
         report_path=report_path,
         claim_token=claim_token,
         cmd_timeout=cmd_timeout,
+        client=client,
+        job_id=job_id,
     )
 
     netdoc_output = plugin.collect(task)

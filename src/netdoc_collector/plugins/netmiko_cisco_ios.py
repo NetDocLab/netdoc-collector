@@ -26,7 +26,6 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
 
         # Standard commands
         return [
-            'show bla',
             'show authentication sessions',
             'show cdp neighbors detail',
             'show device-tracking database',
