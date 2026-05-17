@@ -18,7 +18,7 @@ from netdoc_sdk.client import NetDocClient
 import netdoc_sdk
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
-
+from netdoc_sdk.exceptions import ValidationError
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.utils import REPORT_PATH_FMT, LogListHandler, load_config, cleanup_old_snapshots
 from netdoc_collector.core.tasks import discovery_task
@@ -101,6 +101,7 @@ async def main() -> int:
     # Checking arguments
     if backend_url and backend_token:
         # Running in managed mode
+        managed_mode = True
         logging.info('Running in managed mode (backend_url=%s, collector_name=%s)', backend_url, collector_name)
         client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
 
@@ -127,6 +128,7 @@ async def main() -> int:
 
     elif inventory_file:
         # Running in stand-alone mode
+        managed_mode = False
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         with open(inventory_file, 'r') as fh:
             try:
@@ -172,17 +174,19 @@ async def main() -> int:
     # Dump results
     # netdoc_results = aggregate_and_write(results, report_path)
 
-    # Closing task
-    if client:
-        logging.info("Closing task")
+    # Closing task (managed mode)
+    if managed_mode:
+        try:
+            await client.discovery_jobs_complete_create(
+                id=job_id, claim_token=claim_token, data={"status": "complete", "errors": log_list_handler.records}
+            )
+            logging.info(f"Job {job_id} is completed")
+        except ValidationError as exc:
+            logger.error("Failed to complete job: %s", exc)
+            return 2
 
-    # Cleaming older outputs
+    # Cleaning older outputs
     cleanup_old_snapshots(output_dir, retention)
-
-    print(log_list_handler.records)
-    # import json
-
-    # print(json.dumps(log_list_handler.records, indent=2))
 
     return 1 if failed_hosts else 0
 
