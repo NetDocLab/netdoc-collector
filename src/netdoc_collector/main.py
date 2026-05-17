@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """NetDoc discoverer."""
 
+from importlib.metadata import version
 import getpass
 import asyncio
 import os
@@ -19,39 +20,24 @@ from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
-
+from netdoc_collector.core.utils import REPORT_PATH_FMT, LogListHandler, load_config, cleanup_old_snapshots
 from netdoc_collector.core.tasks import discovery_task
 
 # from netdoc_collector.core.aggregator import aggregate_and_write
-
-REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s  %(levelname)-8s  %(name)s  %(message)s',
     datefmt='%Y-%m-%dT%H:%M:%S',
-    filename='netdoc_collector.log',
+    handlers=[
+        logging.FileHandler('netdoc_collector.log'),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
+log_list_handler = LogListHandler()
+log_list_handler.setLevel(logging.INFO)
+logging.getLogger().addHandler(log_list_handler)
 logger = logging.getLogger(__name__)
-
-
-def load_config(path: str) -> dict:
-    try:
-        with open(path) as f:
-            logging.info('Loading configuration from %s', path)
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        logging.warning('Cannot load configuration from %s', path)
-        pass
-    return {}
-
-
-def is_valid_dir(name):
-    try:
-        datetime.strptime(name, REPORT_PATH_FMT)
-        return True
-    except ValueError:
-        return False
 
 
 async def main() -> int:
@@ -103,20 +89,20 @@ async def main() -> int:
     claim_token = None
     client = None
     collector_name = f"{getpass.getuser()}@{socket.getfqdn()}"
-    collector_version = "0.0.1-TODO"  # TODO get version from class
+    collector_version = version("netdoc-collector")
     idempotency_key = None
     job_id = None
     backend_data = cfg.get('backend', {})
     backend_timeout = args.timeout or backend_data.get("timeout") or 120
     backend_token = os.getenv("NETDOC_TOKEN") or args.token or backend_data.get("token")
     backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
-    backend_verify = args.verify or backend_data.get("verify", True)
+    backend_verify = args.verify or backend_data.get("verify", True)  # TODO
 
     # Checking arguments
     if backend_url and backend_token:
         # Running in managed mode
         logging.info('Running in managed mode (backend_url=%s, collector_name=%s)', backend_url, collector_name)
-        client = NetDocClient(base_url=backend_url, token=backend_token)
+        client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
 
         # Heartbeat (login test)
         try:
@@ -186,32 +172,19 @@ async def main() -> int:
     # Dump results
     # netdoc_results = aggregate_and_write(results, report_path)
 
-    # if args.api_token:
-    #     from netdoc_collector.api_sender import send_to_api
-
-    #     send_to_api(
-    #         yaml_path=output_path,
-    #         api_url=cfg["api"]["url"],
-    #         token=args.api_token,
-    #         timeout=cfg["api"]["timeout"],
-    #     )
+    # Closing task
+    if client:
+        logging.info("Closing task")
 
     # Cleaming older outputs
     cleanup_old_snapshots(output_dir, retention)
 
+    print(log_list_handler.records)
+    # import json
+
+    # print(json.dumps(log_list_handler.records, indent=2))
+
     return 1 if failed_hosts else 0
-
-
-def cleanup_old_snapshots(output_dir, retention):
-    if output_dir and retention:
-        snapshot_dirs = sorted(
-            [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and is_valid_dir(d)],
-            reverse=True,
-        )
-        to_delete = snapshot_dirs[retention:]
-        for d in to_delete:
-            logging.info("Deleted snapshot directory %s", d)
-            shutil.rmtree(os.path.join(output_dir, d))
 
 
 def entrypoint() -> int:

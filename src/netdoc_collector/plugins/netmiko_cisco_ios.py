@@ -2,6 +2,7 @@
 Plugin for Cisco IOS / IOS-XE devices.
 """
 
+import logging
 from typing import Any
 from nornir.core.task import Task
 from .base import BasePlugin
@@ -57,15 +58,17 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
 
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
-        errors = []
         netmiko_device_type = host.data.get('netmiko_device_type')
         raw_outputs: dict[str, str] = {}
         parsed_outputs: dict[str, list] = {}
 
         # Running Standard commands
         for cmd in self.commands():
-            raw_output, parsed_output, cmd_errors = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-            errors = errors + cmd_errors
+            try:
+                raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+            except Exception:
+                logging.error(f"Stopping collection on {self.host_name} due to error")
+                return raw_outputs
             raw_outputs[cmd] = raw_output
             if parsed_output:
                 parsed_outputs[cmd] = parsed_output
@@ -74,12 +77,8 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
         vrfs = ['default'] + [vrf['name'] for vrf in parsed_outputs.get('show vrf', [])]
         for vrf in vrfs:
             for cmd in self.commands(vrf=vrf):
-                raw_output, parsed_output, errors = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                errors = errors + cmd_errors
+                raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
                 raw_outputs[cmd] = raw_output
 
         # Upload
-        upload_errors = self.upload_raw_outputs(raw_outputs)
-        errors = errors + upload_errors
-
-        return errors
+        # TODO

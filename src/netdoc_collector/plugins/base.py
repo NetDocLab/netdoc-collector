@@ -13,6 +13,8 @@ import re
 import json
 from typing import Any
 from pathlib import Path
+from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
+from nornir.core.exceptions import NornirSubTaskError
 from textfsm.parser import TextFSMError
 from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
@@ -110,7 +112,7 @@ class BasePlugin(ABC):
     #     ...
 
     def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
-        errors = []
+        logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
         try:
             parsed_output = None
             cmd_result: str = task.run(
@@ -121,30 +123,32 @@ class BasePlugin(ABC):
                 use_textfsm=False,
             )
             logger.debug(f"Raw output for command '{cmd}' on {self.host_name}: {cmd_result.result}")
-        except Exception as e:
-            self.write_output(f"Error running command: {e}", cmd)
-            logger.error(f"Error running command '{cmd}' on {self.host_name}: {e}")
-            raise Exception(f"Error running command '{cmd}' on {self.host_name}: {e}")
+        except NornirSubTaskError as e:
+            inner = e.result.exception
+            if isinstance(inner, NetmikoAuthenticationException):
+                logger.error(f"Authentication failed on {self.host_name}")
+            elif isinstance(inner, NetmikoTimeoutException):
+                logger.error(f"Timeout on {self.host_name} running '{cmd}'")
+            else:
+                logger.error(f"Error running command '{cmd}' on {self.host_name}: {inner}")
+            raise
 
+        # Dump output files
         try:
             raw_output = cmd_result.result
             parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
         except Exception as e:
-            self.write_output(f"Error parsing command '{cmd}' output on {self.host_name}: {e}", cmd)
             logger.error(f"Error parsing command '{cmd}' output on {self.host_name}: {e}")
 
-        # Dump output files
         self.write_output(raw_output, cmd)
         self.write_output(parsed_output, cmd)
 
-        return raw_output, parsed_output, errors
+        return raw_output, parsed_output
 
     def upload_raw_outputs(self, raw_outputs):
-        errors = []
         if self.client:
             logging.info(f"Uploading collected data")
             self.client.discovery_jobs_raw_outputs_create(data=raw_outputs, claim_token=self.claim_token)
-        return errors
 
     def write_output(self, content, log) -> None:
         if not self.report_path:
