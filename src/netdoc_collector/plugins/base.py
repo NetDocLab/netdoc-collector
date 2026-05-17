@@ -65,6 +65,7 @@ class BasePlugin(ABC):
                 return parsed_output
         except TextFSMError:
             pass
+        logging.warning(f"Cannot parse command '{cmd}'")
         return None
 
     @staticmethod
@@ -134,12 +135,8 @@ class BasePlugin(ABC):
             raise
 
         # Dump output files
-        try:
-            raw_output = cmd_result.result
-            parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
-        except Exception as e:
-            logger.error(f"Error parsing command '{cmd}' output on {self.host_name}: {e}")
-
+        raw_output = cmd_result.result
+        parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
         self.write_output(raw_output, cmd)
         self.write_output(parsed_output, cmd)
 
