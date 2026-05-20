@@ -160,11 +160,10 @@ async def main() -> int:
         report_path=report_path,
         cmd_timeout=cmd_timeout,
     )
+    total_hosts = len(results.values())
     failed_hosts = sum(1 for r in results.values() if r.failed)
-    logger.info('Discovery completed (failed on %i hosts)', failed_hosts)
-
-    # Dump results
-    # netdoc_results = aggregate_and_write(results, report_path)
+    completed_hosts = total_hosts - failed_hosts
+    logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
 
     # Closing task (managed mode)
     if managed_mode:
@@ -193,6 +192,8 @@ async def main() -> int:
                 logger.error("Upload failed for host '%s': status=%s detail=%s", host_name, e.status_code, e.detail)
 
         # Close the job
+        if completed_hosts == 0:
+            job_status = "failed"
         try:
             await client.discovery_jobs_complete_create(
                 id=job_id,
