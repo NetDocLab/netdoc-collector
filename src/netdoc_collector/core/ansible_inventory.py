@@ -59,46 +59,26 @@ class NetDocAnsibleInventory:
 
         # Load hosts
         for inventory_hostname, host_data in self.inventory['_meta']['hostvars'].items():
-            #     # for discoverable in [discoverables]:
-            #     # credential = discoverable.credential
-            #     # Add hosts discoverable via Netmiko
-            #     # platform = DiscoveryModeChoices.MODES.get(discoverable.mode).get("platform")
-            #     # Pass parameters between NetDoc and Nornir
-            #     # data = {
-            #     #     "site_id": discoverable.site.pk,
-            #     #     "site": discoverable.site.slug,
-            #     #     "verify_cert": credential.verify_cert,
-            #     # }
-            #     data = {
-            #         "aaa": "bbb",
-            #         "ccc": "ddd",
-            #     }
-
-            #     # host_key = discoverable.address
-            #     # host_groups = [platform, f'site-{data["site"]}']
-            #     host_groups = ["netmiko", "cisco_ios"]
-
-            #     # Create additional options
-            #     # netmiko_extras = {}
-            #     # if credential.enable_password:
-            #     #     extras["secret"] = credential.get_secrets().get("enable_password")
-            #     # connection_options = {"netmiko": ConnectionOptions(extras=netmiko_extras)}
-            #     connection_options = {}
+            # Create additional options
+            # netmiko_extras = {}
+            # if credential.enable_password:
+            #     extras["secret"] = credential.get_secrets().get("enable_password")
+            # connection_options = {"netmiko": ConnectionOptions(extras=netmiko_extras)}
+            connection_options = {}
 
             hosts[inventory_hostname] = Host(
                 name=inventory_hostname,
                 hostname=host_data.get('ansible_host'),
                 username=host_data.get('ansible_user'),
                 password=host_data.get('ansible_password'),
-                port=22,
-                # platform=host_data.get("netdoc_discovery_type"),
+                port=host_data.get('ansible_port'),
                 platform=host_data.get('netmiko_device_type'),
                 data=host_data,
                 groups=ParentGroups(),
-                # connection_options=connection_options,
-            )  # IP is the key used in AggregatedResults
+                connection_options=connection_options,
+            )
 
-            #     # Add groups
+            # Add groups
             # for host_group in host_groups:
             #     if host_group not in dict(groups):
             #         groups[host_group] = Group(host_group)

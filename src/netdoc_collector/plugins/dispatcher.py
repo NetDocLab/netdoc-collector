@@ -12,33 +12,32 @@ import logging
 from typing import Type
 from .base import BasePlugin
 
-# from .netmiko_aruba_oscx import NetmikoArubaOSCXPlugin
-from .netmiko_cisco_ios import NetmikoCiscoIosSshPlugin
-
-# from .netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
-# from .netmiko_cisco_xr import NetmikoCiscoXRPlugin
-# from .netmiko_hp_comware import NetmikoHPComwarePlugin
-# from .netmiko_hp_procurve import NetmikoHPProcurvePlugin
-# from .netmiko_huawei_vrp import NetmikoHuaweiVRPPlugin
-# from .netmiko_linux import NetmikoLinuxPlugin
-# from .netmiko_allied_telesis_awplus import NetmikoAlliedTelesisAwplusPlugin
+from .netmiko_allied_telesis_awplus import NetmikoAlliedTelesisAwplusPlugin
+from .netmiko_aruba_oscx import NetmikoArubaOscxPlugin
+from .netmiko_cisco_ios import NetmikoCiscoIosPlugin
+from .netmiko_cisco_nxos import NetmikoCiscoNxosPlugin
+from .netmiko_cisco_xr import NetmikoCiscoXrPlugin
+from .netmiko_hp_comware import NetmikoHpComwarePlugin
+from .netmiko_hp_procurve import NetmikoHpProcurvePlugin
+from .netmiko_huawei_vrp import NetmikoHuaweiVrpPlugin
+from .netmiko_linux import NetmikoLinuxAnyPlugin
 
 # ---------------------------------------------------------------------------
 # Registry: (vendor, platform) -> plugin class
 # ---------------------------------------------------------------------------
 
 PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
-    # 'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusSshPlugin,
-    # 'netmiko:aruba:oscx:ssh': NetmikoArubaOscxSshPlugin,
-    'netmiko:cisco:ios:ssh': NetmikoCiscoIosSshPlugin,
-    # 'netmiko:cisco:ios:telnet': NetmikoCiscoIosTelnetPlugin,
-    # 'netmiko:cisco:nxos:ssh': NetmikoCiscoNxosSshPlugin,
-    # 'netmiko:cisco:xr:ssh': NetmikoCiscoXrSshPlugin,
-    # 'netmiko:hp:comware:ssh': NetmikoHpComwareSshPlugin,
-    # 'netmiko:hp:procurve:ssh': NetmikoHpProcurveSshPlugin,
-    # 'netmiko:hp:procurve:telnet': NetmikoHpProcurveTelnetPlugin,
-    # 'netmiko:huawei:vrp:ssh': NetmikoHuaweiVrpSshPlugin,
-    # 'netmiko:linux::ssh': NetmikoLinuxAnySshPlugin,
+    'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusPlugin,
+    'netmiko:aruba:oscx:ssh': NetmikoArubaOscxPlugin,
+    'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
+    'netmiko:cisco:ios:telnet': NetmikoCiscoIosPlugin,
+    'netmiko:cisco:nxos:ssh': NetmikoCiscoNxosPlugin,
+    'netmiko:cisco:xr:ssh': NetmikoCiscoXrPlugin,
+    'netmiko:hp:comware:ssh': NetmikoHpComwarePlugin,
+    'netmiko:hp:procurve:ssh': NetmikoHpProcurvePlugin,
+    'netmiko:hp:procurve:telnet': NetmikoHpProcurvePlugin,
+    'netmiko:huawei:vrp:ssh': NetmikoHuaweiVrpPlugin,
+    'netmiko:linux::ssh': NetmikoLinuxAnyPlugin,
     # 'netdoc:panw:ngfw:https': NetDocPanwNgfwHttpslugin,
     # 'netdoc:vmware:vsphere:https': NetDocVmwareVsphereHttpsPlugin,
 }
