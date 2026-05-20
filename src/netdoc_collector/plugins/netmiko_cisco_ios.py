@@ -80,5 +80,4 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
                 raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
                 raw_outputs[cmd] = raw_output
 
-        # Upload
-        self.upload_raw_outputs(netdoc_id, raw_output)
+        return raw_outputs

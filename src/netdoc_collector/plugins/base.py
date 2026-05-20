@@ -8,6 +8,7 @@ Every plugin must implement:
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from abc import ABC, abstractmethod
 import logging
 import re
@@ -21,6 +22,7 @@ from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
 from netmiko.utilities import get_structured_data
 from netmiko.exceptions import NetmikoTimeoutException
+from netdoc_sdk.exceptions import NetDocError
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +34,6 @@ class BasePlugin(ABC):
         host_data: dict,
         report_path: Path | None,
         cmd_timeout: int = 240,
-        claim_token: str | None = None,
-        client=None,
-        idempotency_key: str | None = None,
-        job_id: str | None = None,
     ):
         """
         Args:
@@ -46,10 +44,6 @@ class BasePlugin(ABC):
         self.host_name: str = host_name
         self.host_data: dict = host_data
         self.cmd_timeout: int = cmd_timeout
-        self.claim_token: str | None = claim_token
-        self.client = client
-        self.job_id: str | None = job_id
-        self.idempotency_key: str | None = idempotency_key
 
         if report_path:
             # Save report path to save logs locally
@@ -110,21 +104,6 @@ class BasePlugin(ABC):
         self.write_output(parsed_output, cmd)
 
         return raw_output, parsed_output
-
-    def upload_raw_outputs(self, netdoc_id, raw_outputs):
-        if self.client:
-            logging.info(f"Uploading collected data")
-            payload = {
-                'canonical_device': netdoc_id,
-                'raw_payload': raw_outputs,
-                'idempotency_key': self.idempotency_key,
-            }
-            # TODO: must check upload return code and raise
-            asyncio.run(
-                self.client.discovery_push_discovered_device_create(
-                    id=self.job_id, data=payload, claim_token=self.claim_token
-                )
-            )
 
     def write_output(self, content, log) -> None:
         if not self.report_path:

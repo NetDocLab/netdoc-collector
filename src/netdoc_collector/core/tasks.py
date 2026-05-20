@@ -20,11 +20,7 @@ from netdoc_collector.plugins.dispatcher import get_plugin
 def discovery_task(
     task: Task,
     report_path: Path,
-    claim_token=None,
-    client=None,
-    idempotency_key=None,
     cmd_timeout=None,
-    job_id=None,
 ) -> Result:
     host = task.host
     netdoc_plugin = host.data.get('netdoc_plugin')
@@ -42,11 +38,7 @@ def discovery_task(
         host_name=host.name,
         plugin=netdoc_plugin,
         report_path=report_path,
-        claim_token=claim_token,
         cmd_timeout=cmd_timeout,
-        client=client,
-        job_id=job_id,
-        idempotency_key=idempotency_key,
     )
 
     netdoc_output = plugin.collect(task)
