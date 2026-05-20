@@ -7,6 +7,7 @@ Every plugin must implement:
   - to_yaml_dict() -> return the final dict to be serialized into YAML output
 """
 
+import asyncio
 from abc import ABC, abstractmethod
 import logging
 import re
@@ -20,7 +21,6 @@ from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
 from netmiko.utilities import get_structured_data
 from netmiko.exceptions import NetmikoTimeoutException
-from netdoc_sdk.models import RawOutput
 
 logger = logging.getLogger(__name__)
 
@@ -81,37 +81,6 @@ class BasePlugin(ABC):
         """Collect data from devices and return result in NetDoc format."""
         ...
 
-    # @abstractmethod
-    # def to_netdoc_dict(self, parsed_outputs: dict[str, Any]) -> dict[str, Any]:
-    #     """
-    #     Build the finalNetDoc dict for this host.
-
-    #     Args:
-    #         parsed_outputs: output of parse()
-
-    #     Returns:
-    #         Dict that will be written under this host's key in the output YAML.
-    #     """
-    #     ...
-
-    # @abstractmethod
-    # def to_netdok_obj(
-    #     self,
-    #     parsed_outputs: dict[str, Any],
-    #     raw_outputs: dict[str, str] | None = None,
-    # ) -> RawOutput:
-    #     """
-    #     Build the DeviceData object for this host.
-
-    #     Args:
-    #         parsed_outputs: dictionary produced from the device config
-    #         raw_outputs: raw command outputs from the device
-
-    #     Returns:
-    #         Object that will be persisted in the DB
-    #     """
-    #     ...
-
     def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
         logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
         try:
@@ -142,10 +111,20 @@ class BasePlugin(ABC):
 
         return raw_output, parsed_output
 
-    def upload_raw_outputs(self, raw_outputs):
+    def upload_raw_outputs(self, netdoc_id, raw_outputs):
         if self.client:
             logging.info(f"Uploading collected data")
-            self.client.discovery_jobs_raw_outputs_create(data=raw_outputs, claim_token=self.claim_token)
+            payload = {
+                'canonical_device': netdoc_id,
+                'raw_payload': raw_outputs,
+                'idempotency_key': self.idempotency_key,
+            }
+            # TODO: must check upload return code and raise
+            asyncio.run(
+                self.client.discovery_push_discovered_device_create(
+                    id=self.job_id, data=payload, claim_token=self.claim_token
+                )
+            )
 
     def write_output(self, content, log) -> None:
         if not self.report_path:

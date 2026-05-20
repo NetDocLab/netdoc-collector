@@ -57,6 +57,7 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
 
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
+        netdoc_id = host.data.get('netdoc_id')
         netmiko_device_type = host.data.get('netmiko_device_type')
         raw_outputs: dict[str, str] = {}
         parsed_outputs: dict[str, list] = {}
@@ -80,4 +81,4 @@ class NetmikoCiscoIosSshPlugin(BasePlugin):
                 raw_outputs[cmd] = raw_output
 
         # Upload
-        # TODO
+        self.upload_raw_outputs(netdoc_id, raw_output)

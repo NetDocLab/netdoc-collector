@@ -5,25 +5,21 @@ from importlib.metadata import version
 import getpass
 import asyncio
 import os
-import shutil
 import argparse
 import logging
 import sys
 import socket
 from datetime import datetime
 from pathlib import Path
-import yaml
 import json
-from netdoc_sdk.client import NetDocClient
 import netdoc_sdk
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
+from netdoc_sdk.client import NetDocClient
 from netdoc_sdk.exceptions import ValidationError
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.utils import REPORT_PATH_FMT, LogListHandler, load_config, cleanup_old_snapshots
 from netdoc_collector.core.tasks import discovery_task
-
-# from netdoc_collector.core.aggregator import aggregate_and_write
 
 logging.basicConfig(
     level=logging.INFO,

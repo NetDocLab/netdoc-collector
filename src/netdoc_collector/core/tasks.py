@@ -46,6 +46,7 @@ def discovery_task(
         cmd_timeout=cmd_timeout,
         client=client,
         job_id=job_id,
+        idempotency_key=idempotency_key,
     )
 
     netdoc_output = plugin.collect(task)
