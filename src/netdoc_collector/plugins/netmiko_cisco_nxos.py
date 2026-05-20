@@ -7,7 +7,7 @@ from nornir.core.task import Task
 from .base import BasePlugin
 
 
-class NetmikoCiscoNXOSPlugin(BasePlugin):
+class NetmikoCiscoNxosSshPlugin(BasePlugin):
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

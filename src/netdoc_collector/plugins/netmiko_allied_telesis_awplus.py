@@ -7,7 +7,7 @@ from nornir.core.task import Task
 from .base import BasePlugin
 
 
-class NetmikoAlliedTelesisAwplusPlugin(BasePlugin):
+class NetmikoAlliedTelesisAwplusSshPlugin(BasePlugin):
     @staticmethod
     def commands() -> list[str]:
         # Standard commands

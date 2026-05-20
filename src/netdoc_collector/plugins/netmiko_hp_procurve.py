@@ -7,7 +7,7 @@ from nornir.core.task import Task
 from .base import BasePlugin
 
 
-class NetmikoHPProcurvePlugin(BasePlugin):
+class NetmikoHpProcurveSshPlugin(BasePlugin):
     @staticmethod
     def commands() -> list[str]:
         # Standard commands
