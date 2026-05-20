@@ -5,25 +5,21 @@ from importlib.metadata import version
 import getpass
 import asyncio
 import os
-import shutil
 import argparse
 import logging
 import sys
 import socket
 from datetime import datetime
 from pathlib import Path
-import yaml
 import json
-from netdoc_sdk.client import NetDocClient
 import netdoc_sdk
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
-from netdoc_sdk.exceptions import ValidationError
+from netdoc_sdk.client import NetDocClient
+from netdoc_sdk.exceptions import NetDocError, ValidationError
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.utils import REPORT_PATH_FMT, LogListHandler, load_config, cleanup_old_snapshots
 from netdoc_collector.core.tasks import discovery_task
-
-# from netdoc_collector.core.aggregator import aggregate_and_write
 
 logging.basicConfig(
     level=logging.INFO,
@@ -163,10 +159,6 @@ async def main() -> int:
         task=discovery_task,
         report_path=report_path,
         cmd_timeout=cmd_timeout,
-        claim_token=claim_token,
-        client=client,
-        idempotency_key=idempotency_key,
-        job_id=job_id,
     )
     failed_hosts = sum(1 for r in results.values() if r.failed)
     logger.info('Discovery completed (failed on %i hosts)', failed_hosts)
@@ -176,13 +168,38 @@ async def main() -> int:
 
     # Closing task (managed mode)
     if managed_mode:
+        job_status = "completed"
+        # Uploading raw output
+        for host_name, result in results.items():
+            if result.failed:
+                # Skip failed hosts
+                continue
+
+            host = nr.inventory.hosts[host_name]
+            netdoc_id = host.data.get('netdoc_id')
+            raw_outputs = result[0].result
+            try:
+                await client.discovery_push_discovered_device_create(
+                    id=job_id,
+                    data={
+                        'canonical_device': netdoc_id,
+                        'raw_payload': raw_outputs,
+                        'idempotency_key': idempotency_key,
+                    },
+                    claim_token=claim_token,
+                )
+            except NetDocError as e:
+                job_status = "failed"
+                logger.error("Upload failed for host '%s': status=%s detail=%s", host_name, e.status_code, e.detail)
+
+        # Close the job
         try:
             await client.discovery_jobs_complete_create(
                 id=job_id,
                 claim_token=claim_token,
-                data={"status": "completed", "log_messages": log_list_handler.records},
+                data={"status": job_status, "log_messages": log_list_handler.records},
             )
-            logging.info(f"Job {job_id} is completed")
+            logging.info(f"Job {job_id} is {job_status}")
         except ValidationError as exc:
             logger.error("Failed to complete job: %s", exc)
             return 2
