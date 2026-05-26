@@ -3,7 +3,9 @@ Plugin for HP Procurve devices.
 """
 
 import logging
+
 from nornir.core.task import Task
+
 from .base import BasePlugin
 
 
@@ -31,7 +33,7 @@ class NetmikoHpProcurvePlugin(BasePlugin):
 
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
-        netmiko_device_type = host.data.get('netmiko_device_type')
+        netmiko_device_type = host.data.get("netmiko_device_type")
         raw_outputs: dict[str, str] = {}
         parsed_outputs: dict[str, list] = {}
 

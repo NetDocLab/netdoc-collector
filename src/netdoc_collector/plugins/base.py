@@ -7,22 +7,19 @@ Every plugin must implement:
   - to_yaml_dict() -> return the final dict to be serialized into YAML output
 """
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from abc import ABC, abstractmethod
+import json
 import logging
 import re
-import json
-from typing import Any
+from abc import ABC, abstractmethod
 from pathlib import Path
-from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
+from typing import Any
+
+from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
+from netmiko.utilities import get_structured_data
 from nornir.core.exceptions import NornirSubTaskError
-from textfsm.parser import TextFSMError
 from nornir.core.task import Task
 from nornir_netmiko.tasks import netmiko_send_command
-from netmiko.utilities import get_structured_data
-from netmiko.exceptions import NetmikoTimeoutException
-from netdoc_sdk.exceptions import NetDocError
+from textfsm.parser import TextFSMError
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +62,9 @@ class BasePlugin(ABC):
     @staticmethod
     def slugify(text: str):
         text = text.lower().strip()
-        text = re.sub(r'[^\w\s-]', '', text)
-        text = re.sub(r'[\s_-]+', '-', text)
-        text = re.sub(r'^-+|-+$', '', text)
+        text = re.sub(r"[^\w\s-]", "", text)
+        text = re.sub(r"[\s_-]+", "-", text)
+        text = re.sub(r"^-+|-+$", "", text)
         return text
 
     @abstractmethod
@@ -114,12 +111,12 @@ class BasePlugin(ABC):
             return
 
         log_file = self.slugify(log)
-        if isinstance(content, dict) or isinstance(content, list):
+        if isinstance(content, dict | list):
             # Write a JSON file
-            with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:
+            with open(self.report_path / Path(f"{log_file}.json"), "w", encoding="utf-8") as fh:
                 json.dump(content, fh, indent=2)
             return
 
         # Write a raw content
-        with open(self.report_path / Path(f'{log_file}.raw'), 'w') as fh:
+        with open(self.report_path / Path(f"{log_file}.raw"), "w") as fh:
             fh.write(content)

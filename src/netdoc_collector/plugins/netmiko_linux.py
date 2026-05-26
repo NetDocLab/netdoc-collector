@@ -3,7 +3,9 @@ Plugin for Linux devices.
 """
 
 import logging
+
 from nornir.core.task import Task
+
 from .base import BasePlugin
 
 
@@ -12,7 +14,7 @@ class NetmikoLinuxAnyPlugin(BasePlugin):
     def commands(vrf=None) -> list[str]:
         if vrf:
             # VRF aware commands
-            if vrf == 'default':
+            if vrf == "default":
                 # Default VRF is blank
                 return [
                     "show ip arp",
@@ -34,7 +36,7 @@ class NetmikoLinuxAnyPlugin(BasePlugin):
 
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
-        netmiko_device_type = host.data.get('netmiko_device_type')
+        netmiko_device_type = host.data.get("netmiko_device_type")
         raw_outputs: dict[str, str] = {}
         parsed_outputs: dict[str, list] = {}
 
@@ -47,7 +49,7 @@ class NetmikoLinuxAnyPlugin(BasePlugin):
                     parsed_outputs[cmd] = parsed_output
 
             # Running VRF aware commands
-            vrfs = ['default'] + [vrf['name'] for vrf in parsed_outputs.get('show vrf', [])]
+            vrfs = ["default"] + [vrf["name"] for vrf in parsed_outputs.get("show vrf", [])]
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
                     raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)

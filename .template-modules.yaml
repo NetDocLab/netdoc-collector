@@ -1,5 +1,0 @@
-ansible: false
-djang_app: null
-pyright: false
-sbom: true
-terraform: false

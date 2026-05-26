@@ -1,10 +1,11 @@
-import yaml
-from pathlib import Path
-import shutil
-from datetime import datetime, timezone
 import logging
+import shutil
+from datetime import UTC, datetime
+from pathlib import Path
 
-REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
+import yaml
+
+REPORT_PATH_FMT = "%Y%m%d-%H%M%S"
 
 
 class LogListHandler(logging.Handler):
@@ -20,7 +21,7 @@ class LogListHandler(logging.Handler):
         self.records.append(
             {
                 "severity": record.levelname,
-                "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+                "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
                 "message": message,
             }
         )
@@ -41,10 +42,10 @@ def cleanup_old_snapshots(output_dir, retention):
 def load_config(path: str) -> dict:
     try:
         with open(path) as f:
-            logging.info('Loading configuration from %s', path)
+            logging.info("Loading configuration from %s", path)
             return yaml.safe_load(f)
     except FileNotFoundError:
-        logging.warning('Cannot load configuration from %s', path)
+        logging.warning("Cannot load configuration from %s", path)
         pass
     return {}
 

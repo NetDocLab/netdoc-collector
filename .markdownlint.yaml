@@ -1,9 +1,21 @@
-# https://github.com/DavidAnson/markdownlint/tree/main/doc
 # MD013 - Line length
 MD013:
+  line_length: 100
   code_blocks: false
-  line_length: -1
-  strict: true
   tables: false
-# MD041 - First line in a file should be a top-level heading
-MD041: false
+  strict: true
+
+# MD024 - No duplicate headings (useful in changelogs where ## Added repeats)
+MD024:
+  siblings_only: true  # allows duplicate headings in different sections
+
+# MD033 - No inline HTML (keep markdown portable)
+MD033: false  # set to true if you want to forbid <br>, <details> etc.
+
+# MD046 - Code block style: enforce fenced blocks (```) over indented
+MD046:
+  style: fenced
+
+# MD048 - Code fence style: enforce backticks over tildes
+MD048:
+  style: backtick
