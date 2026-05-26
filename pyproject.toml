@@ -15,6 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
+    "netdoc-sdk (>=0.2.2,<0.3.0)",
     "netmiko (>=4.6.0,<5.0.0)",
     "nornir (>=3.5.0,<4.0.0)",
     "nornir-netmiko (>=1.0.1,<2.0.0)",
@@ -72,7 +73,6 @@ pytest-cov = ">=4.1"
 pytest-django = "^4.12.0"
 djangorestframework = ">=3.14,<4.0"
 netdoc = {path = "../netdoc", develop = true}
-netdoc-sdk = {path = "../netdoc-sdk", develop = true}
 
 # Code quality
 mypy = ">=1.7"
@@ -162,7 +162,7 @@ typeCheckingMode = "off"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "netdoc.settings.test"
 minversion = "7.0"
-addopts = "-v -ra --strict-markers --strict-config --cov=netdoc_sdk --cov-report=term-missing"
+addopts = "-v -ra --strict-markers --strict-config --cov=netdoc_collector --cov-report=term-missing"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
@@ -215,7 +215,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["netdoc_sdk"]
+known-first-party = ["netdoc_collector"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.ruff.lint.per-file-ignores]

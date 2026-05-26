@@ -9,9 +9,8 @@ Example registry key: ("cisco", "ios") -> CiscoIOSPlugin
 """
 
 import logging
-from typing import Type
-from .base import BasePlugin
 
+from .base import BasePlugin
 from .netmiko_allied_telesis_awplus import NetmikoAlliedTelesisAwplusPlugin
 from .netmiko_aruba_oscx import NetmikoArubaOscxPlugin
 from .netmiko_cisco_ios import NetmikoCiscoIosPlugin
@@ -26,18 +25,18 @@ from .netmiko_linux import NetmikoLinuxAnyPlugin
 # Registry: (vendor, platform) -> plugin class
 # ---------------------------------------------------------------------------
 
-PLUGIN_REGISTRY: dict[tuple[str, str], Type[BasePlugin]] = {
-    'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusPlugin,
-    'netmiko:aruba:oscx:ssh': NetmikoArubaOscxPlugin,
-    'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
-    'netmiko:cisco:ios:telnet': NetmikoCiscoIosPlugin,
-    'netmiko:cisco:nxos:ssh': NetmikoCiscoNxosPlugin,
-    'netmiko:cisco:xr:ssh': NetmikoCiscoXrPlugin,
-    'netmiko:hp:comware:ssh': NetmikoHpComwarePlugin,
-    'netmiko:hp:procurve:ssh': NetmikoHpProcurvePlugin,
-    'netmiko:hp:procurve:telnet': NetmikoHpProcurvePlugin,
-    'netmiko:huawei:vrp:ssh': NetmikoHuaweiVrpPlugin,
-    'netmiko:linux::ssh': NetmikoLinuxAnyPlugin,
+PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
+    "netmiko:allied_telesis:awplus:ssh": NetmikoAlliedTelesisAwplusPlugin,
+    "netmiko:aruba:oscx:ssh": NetmikoArubaOscxPlugin,
+    "netmiko:cisco:ios:ssh": NetmikoCiscoIosPlugin,
+    "netmiko:cisco:ios:telnet": NetmikoCiscoIosPlugin,
+    "netmiko:cisco:nxos:ssh": NetmikoCiscoNxosPlugin,
+    "netmiko:cisco:xr:ssh": NetmikoCiscoXrPlugin,
+    "netmiko:hp:comware:ssh": NetmikoHpComwarePlugin,
+    "netmiko:hp:procurve:ssh": NetmikoHpProcurvePlugin,
+    "netmiko:hp:procurve:telnet": NetmikoHpProcurvePlugin,
+    "netmiko:huawei:vrp:ssh": NetmikoHuaweiVrpPlugin,
+    "netmiko:linux::ssh": NetmikoLinuxAnyPlugin,
     # 'netdoc:panw:ngfw:https': NetDocPanwNgfwHttpslugin,
     # 'netdoc:vmware:vsphere:https': NetDocVmwareVsphereHttpsPlugin,
 }
@@ -61,7 +60,7 @@ def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
 
     if plugin_cls is None:
         for v, p in PLUGIN_REGISTRY:
-            logging.debug('Registered plugin %s=%s', v, p)
+            logging.debug("Registered plugin %s=%s", v, p)
         raise ValueError(f"No plugin registered for plugin='{plugin}'")
 
     return plugin_cls(*args, **kwargs)

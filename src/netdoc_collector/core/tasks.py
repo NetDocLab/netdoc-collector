@@ -13,7 +13,9 @@ Steps per host:
 """
 
 from pathlib import Path
-from nornir.core.task import Task, Result
+
+from nornir.core.task import Result, Task
+
 from netdoc_collector.plugins.dispatcher import get_plugin
 
 
@@ -23,7 +25,7 @@ def discovery_task(
     cmd_timeout=None,
 ) -> Result:
     host = task.host
-    netdoc_plugin = host.data.get('netdoc_plugin')
+    netdoc_plugin = host.data.get("netdoc_plugin")
 
     if not netdoc_plugin:
         return Result(

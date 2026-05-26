@@ -1,5 +1,5 @@
 # Makefile
-.PHONY: install uninstall check coverage fmt lint tests
+.PHONY: install uninstall check coverage doc fmt lint tests
 
 install:
 	poetry install --no-interaction --no-ansi
@@ -15,6 +15,9 @@ check: ## Run all pre-commit tests
 
 coverage: ## Run tests and show coverage report
 	poetry run pytest tests --cov=netdoc_sdk --cov-report=term-missing --cov-fail-under=80
+
+doc:  ## build the documentation into site/
+	poetry run mkdocs build --strict
 
 fmt: ## Code formatting
 	poetry run ruff format .
