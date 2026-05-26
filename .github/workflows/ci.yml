@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          path: netdoc-sdk
+          path: netdoc-collector
 
       - name: Checkout backend
         uses: actions/checkout@v6
@@ -36,31 +36,31 @@ jobs:
 
       - name: Install Poetry
         run: pip install --no-cache-dir poetry
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Display Poetry version
         run: poetry --version
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Configure Poetry
         run: poetry config virtualenvs.in-project true
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Install
         run: make install
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Code linting (make lint)
         run: make lint
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Run checks (pre-commit)
         run: make check
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
       - name: Run tests
         run: make coverage
-        working-directory: netdoc-sdk
+        working-directory: netdoc-collector
 
   snyk:
     needs: tests
