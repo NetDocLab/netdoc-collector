@@ -1,0 +1,77 @@
+name: Tests (CI)
+
+env:
+  PYTHON_VERSION: 3.12
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel any existing runs of this workflow for this same branch
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: netdoc-sdk
+
+      - name: Checkout backend
+        uses: actions/checkout@v6
+        with:
+          repository: NetDocLab/netdoc
+          path: netdoc
+          # Permission -> Content
+          token: ${{ secrets.NETDOC_REPO_TOKEN }}
+
+      - name: Setup Python3
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install --no-cache-dir poetry
+        working-directory: netdoc-sdk
+
+      - name: Display Poetry version
+        run: poetry --version
+        working-directory: netdoc-sdk
+
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+        working-directory: netdoc-sdk
+
+      - name: Install
+        run: make install
+        working-directory: netdoc-sdk
+
+      - name: Code linting (make lint)
+        run: make lint
+        working-directory: netdoc-sdk
+
+      - name: Run checks (pre-commit)
+        run: make check
+        working-directory: netdoc-sdk
+
+      - name: Run tests
+        run: make coverage
+        working-directory: netdoc-sdk
+
+  snyk:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Snyk
+        uses: snyk/actions/python@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high

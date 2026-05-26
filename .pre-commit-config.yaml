@@ -1,92 +1,84 @@
-exclude: __pycache__|\.git|\.venv|\.vscode|build|dist|env|migrations|venv|\.secrets\.baseline$|sbom-cyclonedx.json|fonts|.*large.*|.*\.qcow2|.*\.vma
+# Global excludes: apply to every hook unless overridden at hook level.
+# Keep in sync with [tool.ruff] exclude in pyproject.toml.
+exclude: >-
+  (?x)^(
+    __pycache__/.*|
+    \.git/.*|
+    \.venv/.*|
+    \.vscode/.*|
+    build/.*|
+    dist/.*|
+    env/.*|
+    venv/.*|
+    migrations/.*|
+    fonts/.*|
+    \.secrets\.baseline$|
+    .*\.qcow2$|
+    .*\.vma$
+  )$
+
 repos:
+
+  # --------------------------------------------------------------------------
+  # General file hygiene
+  # Handles: trailing whitespace, EOF newline, BOM, CRLF, merge conflicts,
+  #          large files, case conflicts, JSON/YAML/TOML syntax.
+  # --------------------------------------------------------------------------
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
-      - id: check-json
       - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
       - id: detect-private-key
       - id: end-of-file-fixer
-      - id: fix-byte-order-marker
-      - id: requirements-txt-fixer
       - id: trailing-whitespace
+
+  # --------------------------------------------------------------------------
+  # Python formatting + linting (single tool, replaces black + flake8 + pyupgrade)
+  # - ruff-format: drop-in replacement for black (respects pyproject.toml config)
+  # - ruff check:  covers flake8 (E/F/W), isort (I), pyupgrade (UP), bugbear (B)
+  #                and more — all configured in [tool.ruff.lint] in pyproject.toml
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+    - id: ruff-check
+      name: ruff (check)
+      args: [--output-format=full]
+
+  # --------------------------------------------------------------------------
+  # Security: static analysis for common vulnerabilities.
+  # Ruff has partial coverage (S ruleset) but bandit is more thorough.
+  # Config lives in .bandit.yaml (or pyproject.toml [tool.bandit]).
+  # --------------------------------------------------------------------------
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.9.2
+    rev: 1.9.4
     hooks:
       - id: bandit
-        args: ["-c", ".bandit.yaml"]
-  - repo: https://github.com/psf/black
-    rev: 25.12.0
-    hooks:
-      - id: black
-  # - repo: https://github.com/ibm/detect-secrets
-  #   rev: 0.13.1+ibm.64.dss
-  #   hooks:
-  #     - id: detect-secrets
-  - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.36.4
-    hooks:
-      - id: djlint-jinja
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
-    hooks:
-      - id: flake8
-        args: ["--config", ".flake8"]
-  - repo: https://github.com/tillig/json-sort-cli
-    rev: v3.0.0
-    hooks:
-      - id: json-sort
-        args:
-          - --autofix
+        args: ["-c", "pyproject.toml"]   # prefer pyproject.toml over .bandit.yaml
+        exclude: ^tests/                 # asserts and test patterns are expected
+
+  # --------------------------------------------------------------------------
+  # Markdown linting.
+  # Config in .markdownlint.yaml.
+  # --------------------------------------------------------------------------
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.47.0
+    rev: v0.45.0
     hooks:
       - id: markdownlint
         args: ["--config=.markdownlint.yaml"]
-  - repo: https://github.com/Lucas-C/pre-commit-hooks.git
-    rev: v1.5.5
+
+  # --------------------------------------------------------------------------
+  # Commit message: enforce Conventional Commits format.
+  # Required by release-please for automatic versioning.
+  # Allowed types: feat fix chore docs refactor test ci build perf
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
     hooks:
-      - id: forbid-crlf  # Forbid files containing CRLF end-lines to be committed
-      - id: forbid-tabs  # Forbid files containing tabs to be committed
-      - id: remove-crlf  # Replace CRLF end-lines by LF ones before committing
-      - id: remove-tabs  # Replace tabs by whitespaces before committing
-  - repo: https://github.com/PyCQA/pylint
-    rev: v4.0.4
-    hooks:
-      - id: pylint
-        args: ["--rcfile=.pylintrc"]
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.2
-    hooks:
-      - id: pyupgrade
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
-    hooks:
-      - id: ruff-check  # Run the linter
-        args: [--fix]
-      - id: ruff-format  # Run the formatter
-  - repo: https://github.com/google/yamlfmt
-    rev: v0.20.0
-    hooks:
-      - id: yamlfmt
-        args: [-conf, .yamlfmt]
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.1
-    hooks:
-      - id: yamllint
-        args: [--format, parsable, --strict, -c, .yamllint.yaml]
-  - repo: local
-    hooks:
-      - id: cyclonedx-generate
-        name: Generate CycloneDX SBOM
-        entry: bash -c "cyclonedx-py poetry --with dev -o sbom-cyclonedx.json"
-        language: system
-  - repo: local
-    hooks:
-      - id: bomber-scan
-        name: Scan SBOM
-        entry: bash -c "bomber scan sbom-cyclonedx.json"
-        language: system
-        pass_filenames: false
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, chore, docs, refactor, test, ci, build, perf]
