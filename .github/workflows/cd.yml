@@ -1,13 +1,10 @@
 name: Release (CD)
-
 on:
   push:
     branches: [main]
-
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -20,7 +17,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
   publish:
     needs: release
     if: ${{ needs.release.outputs.release_created }}
@@ -28,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
-        with: { python-version: "3.12" }
+        with: {python-version: "3.12"}
       - run: pip install build twine
       - run: python -m build
       - run: twine upload dist/*

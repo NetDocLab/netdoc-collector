@@ -16,7 +16,6 @@ exclude: >-
     .*\.qcow2$|
     .*\.vma$
   )$
-
 repos:
   # --------------------------------------------------------------------------
   # General file hygiene
@@ -36,7 +35,12 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
-
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.21.0
+    hooks:
+      - id: yamlfmt
+        args: [-conf, .yamlfmt]
+        exclude: .pre-commit-config.yaml
   # --------------------------------------------------------------------------
   # Python formatting + linting (single tool, replaces black + flake8 + pyupgrade)
   # - ruff-format: drop-in replacement for black (respects pyproject.toml config)
@@ -49,7 +53,6 @@ repos:
       - id: ruff-check
         name: ruff (check)
         args: [--output-format=full]
-
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
@@ -57,7 +60,6 @@ repos:
       - id: python-no-eval
       - id: text-unicode-replacement-char
       - id: python-use-type-annotations
-
   # --------------------------------------------------------------------------
   # Security: static analysis for common vulnerabilities.
   # Ruff has partial coverage (S ruleset) but bandit is more thorough.
@@ -69,7 +71,6 @@ repos:
       - id: bandit
         args: ["-c", "pyproject.toml"] # prefer pyproject.toml over .bandit.yaml
         exclude: ^tests/ # asserts and test patterns are expected
-
   # --------------------------------------------------------------------------
   # Markdown linting.
   # Config in .markdownlint.yaml.
@@ -79,7 +80,6 @@ repos:
     hooks:
       - id: markdownlint
         args: ["--config=.markdownlint.yaml"]
-
   # --------------------------------------------------------------------------
   # Commit message: enforce Conventional Commits format.
   # Required by release-please for automatic versioning.
