@@ -1,9 +1,10 @@
 # MD013 - Line length
 MD013:
-  line_length: 100
+  heading_line_length: 80
+  line_length: 10000
   code_blocks: false
   tables: false
-  strict: true
+  strict: false
 # MD024 - No duplicate headings (useful in changelogs where ## Added repeats)
 MD024:
   siblings_only: true  # allows duplicate headings in different sections

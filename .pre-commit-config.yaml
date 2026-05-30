@@ -63,14 +63,13 @@ repos:
   # --------------------------------------------------------------------------
   # Security: static analysis for common vulnerabilities.
   # Ruff has partial coverage (S ruleset) but bandit is more thorough.
-  # Config lives in .bandit.yaml (or pyproject.toml [tool.bandit]).
+  # Config lives in pyproject.toml [tool.bandit].
   # --------------------------------------------------------------------------
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.4
     hooks:
       - id: bandit
-        args: ["-c", "pyproject.toml"] # prefer pyproject.toml over .bandit.yaml
-        exclude: ^tests/ # asserts and test patterns are expected
+        args: ["-c", "pyproject.toml"]
   # --------------------------------------------------------------------------
   # Markdown linting.
   # Config in .markdownlint.yaml.
