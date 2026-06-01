@@ -7,6 +7,7 @@ exclude: >-
     \.venv/.*|
     \.vscode/.*|
     build/.*|
+    CHANGELOG.md|
     dist/.*|
     env/.*|
     venv/.*|
