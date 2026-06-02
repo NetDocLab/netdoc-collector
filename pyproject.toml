@@ -68,6 +68,7 @@ pre-commit = "^4.5.1"
 pytest = ">=7.4"
 pytest-asyncio = "^1.3.0"
 pytest-cov = ">=4.1"
+pytest-env = "^1.6.0"
 
 # Testing (integration tests)
 pytest-django = "^4.12.0"
@@ -156,7 +157,7 @@ typeCheckingMode = "off"
 # ---------------------------------------------------------------------------
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "netdoc.settings.test"
+env = ["DJANGO_ENV=test"]
 minversion = "7.0"
 addopts = "-v -ra --strict-markers --strict-config --cov=netdoc_collector --cov-report=term-missing"
 filterwarnings = [
