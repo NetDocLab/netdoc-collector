@@ -98,6 +98,9 @@ netdoc-collector -i inventory.json -c config.yaml
 
 # or override values on the CLI
 netdoc-collector -i inventory.json -o ./output -w 10
+
+# scan networks only
+netdoc-collector -s -n 192.168.0.0/24 -n 192.168.1.0/24
 ```
 
 Managed mode (claim jobs from backend and push results):
