@@ -26,17 +26,17 @@ from .netmiko_linux import NetmikoLinuxAnyPlugin
 # ---------------------------------------------------------------------------
 
 PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
-    "netmiko:allied_telesis:awplus:ssh": NetmikoAlliedTelesisAwplusPlugin,
-    "netmiko:aruba:oscx:ssh": NetmikoArubaOscxPlugin,
-    "netmiko:cisco:ios:ssh": NetmikoCiscoIosPlugin,
-    "netmiko:cisco:ios:telnet": NetmikoCiscoIosPlugin,
-    "netmiko:cisco:nxos:ssh": NetmikoCiscoNxosPlugin,
-    "netmiko:cisco:xr:ssh": NetmikoCiscoXrPlugin,
-    "netmiko:hp:comware:ssh": NetmikoHpComwarePlugin,
-    "netmiko:hp:procurve:ssh": NetmikoHpProcurvePlugin,
-    "netmiko:hp:procurve:telnet": NetmikoHpProcurvePlugin,
-    "netmiko:huawei:vrp:ssh": NetmikoHuaweiVrpPlugin,
-    "netmiko:linux::ssh": NetmikoLinuxAnyPlugin,
+    'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusPlugin,
+    'netmiko:aruba:oscx:ssh': NetmikoArubaOscxPlugin,
+    'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
+    'netmiko:cisco:ios:telnet': NetmikoCiscoIosPlugin,
+    'netmiko:cisco:nxos:ssh': NetmikoCiscoNxosPlugin,
+    'netmiko:cisco:xr:ssh': NetmikoCiscoXrPlugin,
+    'netmiko:hp:comware:ssh': NetmikoHpComwarePlugin,
+    'netmiko:hp:procurve:ssh': NetmikoHpProcurvePlugin,
+    'netmiko:hp:procurve:telnet': NetmikoHpProcurvePlugin,
+    'netmiko:huawei:vrp:ssh': NetmikoHuaweiVrpPlugin,
+    'netmiko:linux::ssh': NetmikoLinuxAnyPlugin,
     # 'netdoc:panw:ngfw:https': NetDocPanwNgfwHttpslugin,
     # 'netdoc:vmware:vsphere:https': NetDocVmwareVsphereHttpsPlugin,
 }
@@ -60,7 +60,7 @@ def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
 
     if plugin_cls is None:
         for v, p in PLUGIN_REGISTRY:
-            logging.debug("Registered plugin %s=%s", v, p)
+            logging.debug('Registered plugin %s=%s', v, p)
         raise ValueError(f"No plugin registered for plugin='{plugin}'")
 
     return plugin_cls(*args, **kwargs)

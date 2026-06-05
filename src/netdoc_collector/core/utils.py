@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-REPORT_PATH_FMT = "%Y%m%d-%H%M%S"
+REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
 
 
 class LogListHandler(logging.Handler):
@@ -15,14 +15,14 @@ class LogListHandler(logging.Handler):
 
     def emit(self, record):
         message = record.getMessage()
-        if "Traceback" in message:
+        if 'Traceback' in message:
             # Do not store traceback
             return
         self.records.append(
             {
-                "severity": record.levelname,
-                "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
-                "message": message,
+                'severity': record.levelname,
+                'timestamp': datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+                'message': message,
             }
         )
 
@@ -35,17 +35,17 @@ def cleanup_old_snapshots(output_dir, retention):
             reverse=True,
         )
         for d in snapshot_dirs[retention:]:
-            logging.info("Deleted snapshot directory %s", d)
+            logging.info('Deleted snapshot directory %s', d)
             shutil.rmtree(d)
 
 
 def load_config(path: str) -> dict:
     try:
         with open(path) as f:
-            logging.info("Loading configuration from %s", path)
+            logging.info('Loading configuration from %s', path)
             return yaml.safe_load(f)
     except FileNotFoundError:
-        logging.warning("Cannot load configuration from %s", path)
+        logging.warning('Cannot load configuration from %s', path)
         pass
     return {}
 

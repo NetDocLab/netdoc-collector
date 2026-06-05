@@ -25,7 +25,7 @@ def discovery_task(
     cmd_timeout=None,
 ) -> Result:
     host = task.host
-    netdoc_plugin = host.data.get("netdoc_plugin")
+    netdoc_plugin = host.data.get('netdoc_plugin')
 
     if not netdoc_plugin:
         return Result(

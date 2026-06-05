@@ -62,9 +62,9 @@ class BasePlugin(ABC):
     @staticmethod
     def slugify(text: str):
         text = text.lower().strip()
-        text = re.sub(r"[^\w\s-]", "", text)
-        text = re.sub(r"[\s_-]+", "-", text)
-        text = re.sub(r"^-+|-+$", "", text)
+        text = re.sub(r'[^\w\s-]', '', text)
+        text = re.sub(r'[\s_-]+', '-', text)
+        text = re.sub(r'^-+|-+$', '', text)
         return text
 
     @abstractmethod
@@ -87,7 +87,7 @@ class BasePlugin(ABC):
         except NornirSubTaskError as e:
             inner = e.result.exception
             if isinstance(inner, NetmikoAuthenticationException):
-                logger.error(f"Authentication failed on {self.host_name}")
+                logger.error(f'Authentication failed on {self.host_name}')
             elif isinstance(inner, NetmikoTimeoutException):
                 logger.error(f"Timeout on {self.host_name} running '{cmd}'")
             else:
@@ -113,10 +113,10 @@ class BasePlugin(ABC):
         log_file = self.slugify(log)
         if isinstance(content, dict | list):
             # Write a JSON file
-            with open(self.report_path / Path(f"{log_file}.json"), "w", encoding="utf-8") as fh:
+            with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:
                 json.dump(content, fh, indent=2)
             return
 
         # Write a raw content
-        with open(self.report_path / Path(f"{log_file}.raw"), "w") as fh:
+        with open(self.report_path / Path(f'{log_file}.raw'), 'w') as fh:
             fh.write(content)

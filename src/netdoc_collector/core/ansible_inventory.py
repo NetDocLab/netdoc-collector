@@ -80,6 +80,7 @@ class NetDocAnsibleInventory:
             )
 
             # Add groups
+            # TODO
             # for host_group in host_groups:
             #     if host_group not in dict(groups):
             #         groups[host_group] = Group(host_group)

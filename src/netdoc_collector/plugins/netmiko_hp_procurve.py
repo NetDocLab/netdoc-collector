@@ -14,26 +14,26 @@ class NetmikoHpProcurvePlugin(BasePlugin):
     def commands() -> list[str]:
         # Standard commands
         return [
-            "show system",
-            "show running-config",
-            "show vlans",
-            "show interfaces brief",
-            "show cdp neighbors detail",
-            "show lldp info remote-device",
-            "show mac-address",
-            "show arp",
-            "show trunks",
-            "show ip",
-            "show ip route",
-            "show version",
-            "show system",
-            "show logging",
-            "show spanning-tree",
+            'show system',
+            'show running-config',
+            'show vlans',
+            'show interfaces brief',
+            'show cdp neighbors detail',
+            'show lldp info remote-device',
+            'show mac-address',
+            'show arp',
+            'show trunks',
+            'show ip',
+            'show ip route',
+            'show version',
+            'show system',
+            'show logging',
+            'show spanning-tree',
         ]
 
     def collect(self, task: Task) -> dict[str, str]:
         host = task.host
-        netmiko_device_type = host.data.get("netmiko_device_type")
+        netmiko_device_type = host.data.get('netmiko_device_type')
         raw_outputs: dict[str, str] = {}
         parsed_outputs: dict[str, list] = {}
 
@@ -46,5 +46,5 @@ class NetmikoHpProcurvePlugin(BasePlugin):
                     parsed_outputs[cmd] = parsed_output
 
         except Exception:
-            logging.error(f"Stopping collection on {self.host_name} due to error")
+            logging.error(f'Stopping collection on {self.host_name} due to error')
         return raw_outputs
