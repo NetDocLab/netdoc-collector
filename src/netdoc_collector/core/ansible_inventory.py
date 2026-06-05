@@ -5,6 +5,7 @@ import logging
 import os
 
 from nornir.core.inventory import (
+    ConnectionOptions,
     Defaults,
     Group,
     Groups,
@@ -65,7 +66,7 @@ class NetDocAnsibleInventory:
             # if credential.enable_password:
             #     extras["secret"] = credential.get_secrets().get("enable_password")
             # connection_options = {"netmiko": ConnectionOptions(extras=netmiko_extras)}
-            connection_options = {}
+            connection_options: dict[str, ConnectionOptions] = {}
 
             hosts[inventory_hostname] = Host(
                 name=inventory_hostname,

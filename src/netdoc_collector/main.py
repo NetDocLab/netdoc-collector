@@ -289,7 +289,7 @@ async def main() -> int:
         if completed_hosts == 0:
             job_status = 'failed'
         try:
-            await client.discovery_jobs_complete_create(
+            await client.discovery_complete(
                 id=job_id,
                 claim_token=claim_token,
                 data={'status': job_status, 'log_messages': log_list_handler.records},

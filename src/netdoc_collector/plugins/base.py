@@ -14,7 +14,7 @@ from typing import Any
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
 from netmiko.utilities import get_structured_data
 from nornir.core.exceptions import NornirSubTaskError
-from nornir.core.task import Task
+from nornir.core.task import MultiResult, Task
 from nornir_netmiko.tasks import netmiko_send_command
 from textfsm.parser import TextFSMError
 
@@ -99,7 +99,7 @@ class BasePlugin(ABC):
         logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
         try:
             parsed_output = None
-            cmd_result: str = task.run(
+            cmd_result: MultiResult = task.run(
                 task=netmiko_send_command,
                 command_string=cmd,
                 use_timing=False,

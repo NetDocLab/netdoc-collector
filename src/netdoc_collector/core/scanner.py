@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network
 from pathlib import Path
+from typing import Any
 
 from netmiko.exceptions import NetmikoAuthenticationException
 from netmiko.ssh_autodetect import SSHDetect
@@ -39,11 +40,7 @@ class HostResult:
     port: int | None = None
     netmiko_device_type: str | None = None
     netdoc_plugin: str | None = None
-    credential: dict[str] = field(default_factory=dict)
-
-    def to_dict(self) -> dict:
-        """Return a dictionary representation of the scan result."""
-        return {'ip': self.ip, 'port': self.port, 'device_type': self.device_type}
+    credential: dict[str, str] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────
@@ -60,7 +57,7 @@ class NetworkScanner:
         ports: list[int],
         timeout: float,
         concurrency: int,
-        credentials: dict[str],
+        credentials: list[dict],
     ) -> None:
         self.ports = ports
         self.timeout = timeout
@@ -103,6 +100,7 @@ class NetworkScanner:
                     'username': username,
                     'password': password,
                 }
+                logging.error(device)
                 try:
                     guesser = SSHDetect(**device)
                 except NetmikoAuthenticationException:
@@ -127,9 +125,9 @@ class NetworkScanner:
         async with semaphore:
             tasks = {port: asyncio.create_task(self._check_port(ip, port)) for port in self.ports}
             open_ports = []
-            for port, task in tasks.items():
+            for open_port, task in tasks.items():
                 if await task:
-                    open_ports.append(port)
+                    open_ports.append(open_port)
             open_ports.sort()
 
         if not open_ports:
@@ -236,7 +234,7 @@ class NetworkScanner:
             hosts (list[HostResult]): discovered hosts to serialize.
             path (str): path to the output JSON file.
         """
-        inventory = {
+        inventory: dict[str, Any] = {
             '_meta': {'hostvars': {}},
             'all': {'hosts': []},
         }

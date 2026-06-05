@@ -25,7 +25,7 @@ from .netmiko_linux import NetmikoLinuxAnyPlugin
 # Registry: (vendor, platform) -> plugin class
 # ---------------------------------------------------------------------------
 
-PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
+PLUGIN_REGISTRY: dict[str, type[BasePlugin]] = {
     'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusPlugin,
     'netmiko:aruba:oscx:ssh': NetmikoArubaOscxPlugin,
     'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
@@ -57,8 +57,8 @@ def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
     plugin_cls = PLUGIN_REGISTRY.get(plugin)
 
     if plugin_cls is None:
-        for v, p in PLUGIN_REGISTRY:
-            logging.debug('Registered plugin %s=%s', v, p)
+        for plugin_key, plugin_class in PLUGIN_REGISTRY.items():
+            logging.debug('Registered plugin %s=%s', plugin_key, plugin_class)
         raise ValueError(f"No plugin registered for plugin='{plugin}'")
 
     return plugin_cls(*args, **kwargs)
