@@ -11,6 +11,7 @@ from .base import BasePlugin
 
 class NetmikoLinuxAnyPlugin(BasePlugin):
     """Vendor plugin class for NetmikoLinuxAnyPlugin."""
+
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

@@ -1,0 +1,32 @@
+site_name: NetDoc Collector
+site_description: "NetDoc Collector — network discovery collector for NetDoc"
+repo_url: https://github.com/NetDocLab/netdoc-collector
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - pip install -e .
+          rendering:
+            show_source: true
+  - autorefs
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Usage: usage.md
+  - Reference:
+      - NetDoc Collector: reference/netdoc_collector.md

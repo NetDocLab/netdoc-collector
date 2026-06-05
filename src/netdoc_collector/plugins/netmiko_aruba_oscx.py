@@ -11,6 +11,7 @@ from .base import BasePlugin
 
 class NetmikoArubaOscxPlugin(BasePlugin):
     """Vendor plugin class for NetmikoArubaOscxPlugin."""
+
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

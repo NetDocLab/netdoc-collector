@@ -156,14 +156,14 @@ class NetworkScanner:
             elif netmiko_device_type == 'cisco_nxos':
                 netdoc_plugin = 'netmiko:cisco:nxos:ssh'
             elif netmiko_device_type == 'cisco_xr':
-                netdoc_plugin = 'netmiko_cisco_xr:ssh'
+                netdoc_plugin = 'netmiko:cisco_xr:ssh'
             elif netmiko_device_type == 'hp_comware':
                 netdoc_plugin = 'netmiko:hp:comware:ssh'
             elif netmiko_device_type == 'hp_procurve':
                 netdoc_plugin = 'netmiko:hp:procurve:ssh'
-            elif netmiko_device_type == 'huawei_vrp ':
+            elif netmiko_device_type == 'huawei_vrp':
                 netdoc_plugin = 'netmiko:huawei:vrp:ssh'
-            elif netmiko_device_type == 'linux ':
+            elif netmiko_device_type == 'linux':
                 netdoc_plugin = 'netmiko:linux::ssh'
 
         if not netdoc_plugin:
