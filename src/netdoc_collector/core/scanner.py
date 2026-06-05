@@ -1,11 +1,8 @@
-"""
-network_scan.py - Async TCP network scanner for Linux (no root required).
+"""Async network scanner and host discovery utilities.
 
-Usage:
-  python network_scan.py 192.168.1.0/24
-  python network_scan.py 192.168.1.0/24 10.0.0.0/24 --ports 22 80 443
-  python network_scan.py 192.168.1.0/24 --concurrency 100 --timeout 1.5
-  python network_scan.py 192.168.1.0/24 --output results.json
+This module implements an asynchronous TCP port scanner that can optionally
+probe SSH endpoints with Netmiko to detect device types and map them to
+NetDoc plugins.
 """
 
 import asyncio
@@ -28,6 +25,16 @@ logger = logging.getLogger('scanner')
 # ─────────────────────────────────────────────
 @dataclass
 class HostResult:
+    """Result of a single host scan.
+
+    Attributes:
+        ip (str): host IP address.
+        port (int | None): first responsive port discovered.
+        netmiko_device_type (str | None): Netmiko autodetect device type.
+        netdoc_plugin (str | None): mapped NetDoc plugin identifier.
+        credential (dict[str]): credential record used for probing.
+    """
+
     ip: str
     port: int | None = None
     netmiko_device_type: str | None = None
@@ -35,6 +42,7 @@ class HostResult:
     credential: dict[str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
+        """Return a dictionary representation of the scan result."""
         return {'ip': self.ip, 'port': self.port, 'device_type': self.device_type}
 
 
@@ -42,6 +50,11 @@ class HostResult:
 #  Scanner
 # ─────────────────────────────────────────────
 class NetworkScanner:
+    """Asynchronous network scanner that detects responsive hosts.
+
+    The scanner can attempt SSH-based OS discovery for hosts with port 22 open.
+    """
+
     def __init__(
         self,
         ports: list[int],
@@ -195,8 +208,13 @@ class NetworkScanner:
                     yield result
 
     async def scan(self, networks: list[IPv4Network]) -> AsyncIterator[HostResult]:
-        """
-        Async generator: yield HostResult for each active host across all networks.
+        """Yield HostResult objects for each active host in the target networks.
+
+        Args:
+            networks (list[IPv4Network]): list of networks to scan.
+
+        Yields:
+            HostResult: discovery result for each host with an open port.
 
         Usage:
             async for host in scanner.scan(["192.168.1.0/24"]):
@@ -212,7 +230,12 @@ class NetworkScanner:
 
     @staticmethod
     def save_inventory(hosts: list[HostResult], path: str) -> None:
-        """Save the inventory to a JSON file."""
+        """Save a host inventory file in standard Ansible JSON format.
+
+        Args:
+            hosts (list[HostResult]): discovered hosts to serialize.
+            path (str): path to the output JSON file.
+        """
         inventory = {
             '_meta': {'hostvars': {}},
             'all': {'hosts': []},

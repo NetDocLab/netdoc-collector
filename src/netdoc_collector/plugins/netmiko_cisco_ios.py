@@ -10,6 +10,7 @@ from .base import BasePlugin
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
+    """Vendor plugin class for NetmikoCiscoIosPlugin."""
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

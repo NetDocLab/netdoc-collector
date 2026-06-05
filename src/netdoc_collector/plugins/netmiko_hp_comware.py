@@ -10,6 +10,7 @@ from .base import BasePlugin
 
 
 class NetmikoHpComwarePlugin(BasePlugin):
+    """Vendor plugin class for NetmikoHpComwarePlugin."""
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

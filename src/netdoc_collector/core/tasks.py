@@ -1,15 +1,8 @@
-"""
-Nornir task: discovery_task
+"""Nornir discovery task and plugin dispatch helpers.
 
-This is the function passed to nr.run(). It runs on every host in parallel.
-
-Steps per host:
-  1. Determine vendor and platform from host data/inventory
-  2. Instantiate the correct plugin via the dispatcher
-  3. Open an SSH connection (via netmiko)
-  4. Execute each command returned by plugin.commands()
-  5. Pass raw outputs to plugin.parse()
-  6. Return plugin.to_yaml_dict() as the task result
+This module implements the task executed by Nornir for every host in the
+inventory. It resolves the configured NetDoc plugin, executes device
+collection, and returns structured results.
 """
 
 from pathlib import Path
@@ -24,6 +17,16 @@ def discovery_task(
     report_path: Path,
     cmd_timeout=None,
 ) -> Result:
+    """Execute the NetDoc plugin discovery workflow for one host.
+
+    Args:
+        task (Task): Nornir task object representing the host execution context.
+        report_path (Path): directory where raw output reports are stored.
+        cmd_timeout (int | None): override command timeout for this host.
+
+    Returns:
+        Result: Nornir Result object containing plugin output or failure.
+    """
     host = task.host
     netdoc_plugin = host.data.get('netdoc_plugin')
 

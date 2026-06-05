@@ -43,17 +43,15 @@ PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
 
 
 def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
-    """
-    Instantiate and return the correct plugin for a given vendor/platform.
+    """Instantiate the configured plugin for a registered NetDoc platform.
 
     Args:
-        vendor:    e.g. "cisco"
-        platform:  e.g. "ios"
-        host_name: Nornir host name
-        host_data: host.data dict from Nornir inventory
+        plugin (str): plugin identifier key, e.g. "netmiko:cisco:ios:ssh".
+        *args: positional arguments forwarded to the plugin constructor.
+        **kwargs: keyword arguments forwarded to the plugin constructor.
 
     Raises:
-        ValueError: if no plugin is registered for the (vendor, platform) pair.
+        ValueError: if no plugin is registered for the requested plugin key.
     """
 
     plugin_cls = PLUGIN_REGISTRY.get(plugin)

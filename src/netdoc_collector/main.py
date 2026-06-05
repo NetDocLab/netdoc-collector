@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""NetDoc discoverer."""
+"""NetDoc collector command-line entrypoint and task orchestration.
+
+This module defines the asynchronous collector application that can run
+in either stand-alone or managed mode. It parses CLI arguments, loads
+configuration, initializes Nornir, executes discovery tasks, and handles
+upload of raw discovery payloads to the NetDoc backend.
+"""
 
 import argparse
 import asyncio
@@ -47,6 +53,12 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> int:
+    """Parse CLI arguments and execute the NetDoc collector workflow.
+
+    Returns:
+        int: exit code; 0 on success, non-zero on failure.
+    """
+
     parser = argparse.ArgumentParser(description='NetDoc collector')
 
     # Scanner
@@ -130,11 +142,11 @@ async def main() -> int:
                     network = ipaddress.IPv4Network(f'{addr.address}/{addr.netmask}', strict=False)
 
                     if network.is_loopback:
-                        # Esclude loopback
+                        # Exclude loopback
                         continue
 
                     if not network.is_private:
-                        # Inlcude private networks only
+                        # Include private networks only
                         continue
 
                     networks.append(network)
@@ -294,6 +306,11 @@ async def main() -> int:
 
 
 def entrypoint() -> int:
+    """Execute the collector entrypoint from a console script.
+
+    Returns:
+        int: exit code from :func:`main`.
+    """
     return asyncio.run(main())
 
 

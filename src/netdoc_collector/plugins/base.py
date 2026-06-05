@@ -1,10 +1,7 @@
-"""
-Base class for all vendor/platform plugins.
+"""Base plugin definitions and common utilities for NetDoc plugins.
 
-Every plugin must implement:
-  - commands()   -> list of CLI commands to run on the device
-  - parse()      -> transform raw command outputs into a structured dict
-  - to_yaml_dict() -> return the final dict to be serialized into YAML output
+This module defines the abstract :class:`BasePlugin` class and shared helpers
+used by all vendor-specific collector plugins.
 """
 
 import json
@@ -25,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 class BasePlugin(ABC):
+    """Abstract base class for a NetDoc vendor/platform plugin."""
+
     def __init__(
         self,
         host_name: str,
@@ -32,10 +31,13 @@ class BasePlugin(ABC):
         report_path: Path | None,
         cmd_timeout: int = 240,
     ):
-        """
+        """Initialize the plugin with host context and output options.
+
         Args:
-            host_name: Nornir host name (used as key in output)
-            host_data: dict of host.data fields from inventory (vendor, site, etc.)
+            host_name (str): Nornir host name used as the output key.
+            host_data (dict): host inventory metadata including plugin mapping.
+            report_path (Path | None): optional directory for debug output files.
+            cmd_timeout (int): per-command timeout in seconds.
         """
         self.report_path = None
         self.host_name: str = host_name
@@ -49,6 +51,16 @@ class BasePlugin(ABC):
 
     @staticmethod
     def parse_netmiko_output(raw_output, platform, cmd) -> None | list:
+        """Parse raw Netmiko command output to structured data.
+
+        Args:
+            raw_output (str): raw device output from Netmiko.
+            platform (str): Netmiko platform name used for parsing.
+            cmd (str): command string to identify the parser template.
+
+        Returns:
+            None | list: parsed output list, or None when parsing is unavailable.
+        """
         try:
             parsed_output: list = get_structured_data(raw_output, platform=platform, command=cmd)
             if isinstance(parsed_output, list):
@@ -60,7 +72,8 @@ class BasePlugin(ABC):
         return None
 
     @staticmethod
-    def slugify(text: str):
+    def slugify(text: str) -> str:
+        """Normalize text into a slug suitable for filenames."""
         text = text.lower().strip()
         text = re.sub(r'[^\w\s-]', '', text)
         text = re.sub(r'[\s_-]+', '-', text)
@@ -73,6 +86,16 @@ class BasePlugin(ABC):
         ...
 
     def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
+        """Execute a Netmiko command and optionally parse the result.
+
+        Args:
+            task (Task): Nornir task context used to run the command.
+            platform (str): Netmiko platform used to parse the output.
+            cmd (str): command string to execute on the device.
+
+        Returns:
+            tuple[str, None | list]: raw output and parsed structured output.
+        """
         logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
         try:
             parsed_output = None
@@ -103,6 +126,12 @@ class BasePlugin(ABC):
         return raw_output, parsed_output
 
     def write_output(self, content, log) -> None:
+        """Write raw or structured command output to the report path.
+
+        Args:
+            content (str | dict | list): raw or parsed command output.
+            log (str): command name or log label used to build the filename.
+        """
         if not self.report_path:
             # Write output if report path is set only
             return
