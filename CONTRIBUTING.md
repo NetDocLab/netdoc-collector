@@ -1,4 +1,4 @@
-# Contributing to netdoc-sdk
+# Contributing to netdoc-collector
 
 Thank you for your interest in contributing. This document covers the development
 workflow, tooling, and conventions used in this project.
@@ -30,8 +30,8 @@ workflow, tooling, and conventions used in this project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/netdoclab/netdoc-sdk.git
-cd netdoc-sdk
+git clone https://github.com/netdoclab/netdoc-collector.git
+cd netdoc-collector
 
 # Install dependencies (including dev extras)
 poetry install
@@ -49,20 +49,27 @@ make check
 ## Project Structure
 
 ```text
+├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── Makefile
 ├── README.md
 ├── config-example.yaml
+├── inventory-example.json
+├── mkdocs.yml
+├── nornir.log
 ├── poetry.lock
 ├── pyproject.toml
 ├── release-please-config.json
+├── secrets-example.yaml
 ├── src
 │   └── netdoc_collector
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── core
+│       │   ├── __init__.py
 │       │   ├── ansible_inventory.py
+│       │   ├── scanner.py
 │       │   ├── tasks.py
 │       │   └── utils.py
 │       ├── main.py
