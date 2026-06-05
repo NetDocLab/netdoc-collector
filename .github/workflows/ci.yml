@@ -12,11 +12,11 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (collector)
         uses: actions/checkout@v6
         with:
           path: netdoc-collector
-      - name: Checkout backend
+      - name: Checkout (backend)
         uses: actions/checkout@v6
         with:
           repository: NetDocLab/netdoc
@@ -29,23 +29,20 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
         run: pip install --no-cache-dir poetry
-        working-directory: netdoc-collector
       - name: Display Poetry version
         run: poetry --version
-        working-directory: netdoc-collector
       - name: Configure Poetry
         run: poetry config virtualenvs.in-project true
-        working-directory: netdoc-collector
-      - name: Install
+      - name: Install collector
         run: make install
         working-directory: netdoc-collector
-      - name: Code linting (make lint)
+      - name: Code linting on collector (make lint)
         run: make lint
         working-directory: netdoc-collector
-      - name: Run checks (pre-commit)
+      - name: Run checks on collector (pre-commit)
         run: make check
         working-directory: netdoc-collector
-      - name: Run tests
+      - name: Run tests on collector (make coverage)
         run: make coverage
         working-directory: netdoc-collector
   snyk:
