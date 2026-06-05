@@ -227,5 +227,5 @@ class NetworkScanner:
                 'netdoc_plugin': host.netdoc_plugin,
             }
             inventory['all']['hosts'].append(host.ip)
-        Path(path).write_text(json.dumps(inventory, indent=2, sort_keys=True))
+        Path(path).write_text(json.dumps(inventory, indent=4, sort_keys=True))
         logger.info('Inventory saved to %s', path)
