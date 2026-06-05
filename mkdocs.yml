@@ -28,5 +28,3 @@ markdown_extensions:
 nav:
   - Home: README.md
   - Usage: usage.md
-  - Reference:
-      - NetDoc Collector: reference/netdoc_collector.md
