@@ -1,127 +1,162 @@
 # NetDoc Collector
 
-NetDoc Collector is the network discovery/collector component used by NetDoc. It runs probes against network devices (via SSH/telnet/HTTPS) and produces a per-device raw payload in a format ingestible by the NetDoc backend.
+NetDoc Collector is the network discovery and collector component used by NetDoc. It runs probes against network devices (via SSH/telnet/HTTPS) and creates per-device raw payloads that the NetDoc backend can ingest.
 
-This README provides quick installation and usage examples for both stand-alone and managed (backend-driven) modes, plus example files for `inventory`, `config`, and `secrets`.
+This repository uses `mkdocs` with the root `README.md` as the homepage and `mkdocstrings` to generate API reference content from `src/netdoc_collector`.
 
 ## Installation
 
-Install in editable mode for development:
+Recommended install for development:
 
 ```bash
-pip install netdoc-collector
+poetry install
 ```
 
-You can run the CLI using the console script `netdoc-collector` (installed by the package):
+Install the package in editable mode if you want the CLI available immediately:
 
 ```bash
-netdoc-collector --help
+poetry run pip install -e .
+```
+
+Run the command-line tool:
+
+```bash
+poetry run netdoc-collector --help
 ```
 
 ## Modes
 
-- Stand-alone: read a local Ansible-style JSON inventory and run collection locally, writing output under `output/`.
-- Managed: poll the NetDoc backend for discovery jobs, run collection and push raw payloads back to the backend.
+- **Stand-alone mode**: read a local Ansible-style JSON inventory and collect data locally.
+- **Managed mode**: claim jobs from the NetDoc backend, run collection, and push results back.
 
-## Example: `config.yaml`
-
-Minimal configuration options used by the collector.
+## Configuration example: `config.yaml`
 
 ```yaml
-inventory: inventory.json  # default inventory file (stand-alone)
-output: ./output           # directory to write discovery snapshots
-workers: 5                 # number of worker threads for Nornir
-cmd_timeout: 240           # per-command timeout (seconds)
-retention: 5               # keep last N snapshots locally
+inventory: inventory.json
+output: ./output
+workers: 5
+cmd_timeout: 240
+retention: 5
 
-# Backend configuration for managed mode
 backend:
-    url: https://netdoc.example.com/api/v1
-    timeout: 120           # timeout for requests to the backend
-    token: null            # optional, can be provided via env or CLI
-    verify: true           # whether to verify TLS for backend
+  url: https://netdoc.example.com/api/v1
+  timeout: 120
+  token: null
+  verify: true
 ```
 
-## Example: `secrets.yaml`
+## Secrets example: `secrets.yaml`
 
-This file stores collector credentials used by the built-in scanner to attempt SSH logins for OS/device detection. Keep it readable only by the collector service (file permissions) and never commit real secrets to source control.
+This file stores credentials used by the collector's scanner and collection logic. Keep it out of version control and protect it with restrictive file permissions.
 
 ```yaml
 credentials:
-    - label: default
-        username: admin
-        password: Passw0rd!
-        secret: enable_secret  # optional enable/privileged password
-    - label: readonly
-        username: readonly
-        password: read0nly
+  - label: default
+    username: admin
+    password: Passw0rd!
+    secret: enable_secret
+  - label: readonly
+    username: readonly
+    password: read0nly
 ```
 
-## Example: `inventory.json` (Ansible dynamic inventory format)
+## Inventory example: `inventory.json`
 
-The collector expects an Ansible-style JSON inventory with `_meta.hostvars`. At minimum each host should provide `ansible_host` and `netdoc_plugin` so discovery knows which plugin to use.
+The collector accepts Ansible-style JSON inventory with `_meta.hostvars` and host-specific connection details.
 
 ```json
 {
-    "_meta": {
-        "hostvars": {
-            "switch1.example.com": {
-                "ansible_host": "192.0.2.10",
-                "ansible_user": "admin",
-                "ansible_password": "Passw0rd!",
-                "netmiko_device_type": "cisco_ios",
-            },
-            "linux-host.example.com": {
-                "ansible_host": "192.0.2.20",
-                "ansible_user": "ubuntu",
-                "ansible_password": "secret",
-                "netmiko_device_type": "linux",
-            }
-        }
-    },
-    "all": {
-        "hosts": [
-            "switch1.example.com",
-            "linux-host.example.com"
-        ]
+  "_meta": {
+    "hostvars": {
+      "switch1.example.com": {
+        "ansible_host": "192.0.2.10",
+        "ansible_user": "admin",
+        "ansible_password": "Passw0rd!",
+        "netmiko_device_type": "cisco_ios"
+      },
+      "linux-host.example.com": {
+        "ansible_host": "192.0.2.20",
+        "ansible_user": "ubuntu",
+        "ansible_password": "secret",
+        "netmiko_device_type": "linux"
+      }
     }
+  },
+  "all": {
+    "hosts": [
+      "switch1.example.com",
+      "linux-host.example.com"
+    ]
+  }
 }
 ```
 
 ## Usage examples
 
-Stand-alone mode (use a local inventory):
+### Stand-alone mode
 
 ```bash
-# read inventory.json and write outputs to ./output
 netdoc-collector -i inventory.json -c config.yaml
-
-# or override values on the CLI
 netdoc-collector -i inventory.json -o ./output -w 10
-
-# scan networks only
-netdoc-collector -s -n 192.168.0.0/24 -n 192.168.1.0/24
 ```
 
-Managed mode (claim jobs from backend and push results):
+### Scanner mode
 
 ```bash
-# provide backend URL and token (env or CLI)
-export NETDOC_TOKEN="<your-api-token>"
-netdoc-collector --url https://netdoc.example.com --token $NETDOC_TOKEN
+netdoc-collector -s -n 172.25.82.2/32
+```
 
-# you can also pass token and url via CLI flags
+### Managed mode
+
+```bash
+export NETDOC_TOKEN="<your-api-token>"
+netdoc-collector --url https://netdoc.example.com --token "$NETDOC_TOKEN"
+```
+
+Or pass credentials directly:
+
+```bash
 netdoc-collector --url https://netdoc.example.com --token mytoken --workers 8
 ```
 
-Notes:
-- When running in managed mode, the collector will attempt to login to the backend to claim discovery jobs. Provide a valid `backend.url` and API token via `config.yaml`, environment variable `NETDOC_TOKEN`, or the `--token` CLI flag.
-- Keep `secrets.yaml` permissions restrictive (e.g. `chmod 600 secrets.yaml`).
-
 ## Output
 
-Discovery snapshots are written under the configured `output` directory in timestamped folders. Each host will have a subdirectory with `.json` and `.raw` files containing command outputs and parsed results.
+Discovery snapshots are written into the configured `output` directory in timestamped folders. Each host gets a subdirectory with JSON payloads and raw command output files.
+
+## Developer quickstart
+
+```bash
+git clone https://github.com/NetDocLab/netdoc-collector.git
+cd netdoc-collector
+poetry install
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+### Run tests
+
+```bash
+poetry run pytest
+```
+
+### Build documentation locally
+
+```bash
+poetry run mkdocs build --strict
+poetry run mkdocs serve -a 127.0.0.1:8000
+```
+
+### Formatting and linting
+
+```bash
+poetry run ruff check .
+poetry run ruff format .
+```
+
+## Documentation
+
+This project publishes docs from the root `README.md` and reference pages generated from source code using `mkdocstrings`.
 
 ## Contributing
 
-See the project repository for contribution guidelines and coding standards.
+See `CONTRIBUTING.md` for contribution guidelines, branch conventions, and CI requirements.

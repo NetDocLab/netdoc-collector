@@ -2,6 +2,7 @@ site_name: NetDoc Collector
 site_description: "NetDoc Collector — network discovery collector for NetDoc"
 repo_url: https://github.com/NetDocLab/netdoc-collector
 site_dir: site
+docs_dir: docs
 
 theme:
   name: material
@@ -28,3 +29,6 @@ markdown_extensions:
 nav:
   - Home: README.md
   - Usage: usage.md
+  - Contributing: CONTRIBUTING.md
+  - Reference:
+      - NetDoc Collector: reference/netdoc_collector.md

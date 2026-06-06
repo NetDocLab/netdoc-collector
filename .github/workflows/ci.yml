@@ -36,6 +36,9 @@ jobs:
       - name: Install collector
         run: make install
         working-directory: netdoc-collector
+      - name: Validate collector documentation build
+        run: poetry run mkdocs build --strict
+        working-directory: netdoc-collector
       - name: Code linting on collector (make lint)
         run: make lint
         working-directory: netdoc-collector
