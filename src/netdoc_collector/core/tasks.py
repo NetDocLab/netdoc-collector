@@ -38,7 +38,7 @@ async def send_collector_heartbeat(
         try:
             await collector_client.collector_heartbeat(name=name, version=version)
         except Exception as exc:
-            logging.error(exc.message)
+            logging.error(exc)
             sys.exit(1)
         await asyncio.sleep(interval)
 
@@ -65,7 +65,7 @@ async def send_job_heartbeat(
         try:
             await collector_client.discoveryjob_heartbeat(id=id, claim_token=claim_token)
         except Exception as exc:
-            logging.error(exc.message)
+            logging.error(exc)
             sys.exit(1)
         await asyncio.sleep(interval)
 

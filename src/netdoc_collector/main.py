@@ -196,7 +196,33 @@ async def main() -> int:
     # Cleaning older outputs
     cleanup_old_snapshots(output_dir, retention)
 
-    if not client and scan:
+    if client:
+        # Managed mode
+
+        # Claim job
+        try:
+            job = await client.discoveryjob_claim()
+            if not job:
+                # Nothing to do
+                logging.info('No job to claim')
+                return 0
+        except ValidationError as exc:
+            logging.error(exc.message)
+            return 7
+
+        job_id = job.id
+        idempotency_key = job.idempotency_key
+        claim_token = job.claim_token
+        inventory = job.inventory
+        logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
+
+        # Regurlary send job heartbeat
+        job_heartbeat_task = asyncio.create_task(
+            send_job_heartbeat(client, id=job_id, claim_token=claim_token)
+        )
+        background_tasks.add(job_heartbeat_task)
+        job_heartbeat_task.add_done_callback(background_tasks.discard)
+    elif scan:
         # Stand-alone mode (scan)
         scanner = NetworkScanner(
             ports=[22, 23, 80, 443],
@@ -207,9 +233,8 @@ async def main() -> int:
         hosts = [host async for host in scanner.scan(networks)]
         scanner.save_inventory(hosts, inventory_file)
         return 0
-    elif not client and inventory_file:
+    else:
         # Stand-alone mode (discovery)
-        managed_mode = False
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         with open(inventory_file) as fh:
             try:
@@ -218,33 +243,7 @@ async def main() -> int:
                 logger.error('Invalid JSON in inventory file: %s', inventory_file)
                 return 8
 
-    # Managed mode
-
-    # Claim job
-    try:
-        job = await client.discoveryjob_claim()
-        if not job:
-            # Nothing to do
-            logging.info('No job to claim')
-            return 0
-    except ValidationError as exc:
-        logging.error(exc.message)
-        return 7
-
-    job_id = job.id
-    idempotency_key = job.idempotency_key
-    claim_token = job.claim_token
-    inventory = job.inventory
-    logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
-
-    # Regurlary send job heartbeat
-    job_heartbeat_task = asyncio.create_task(
-        send_job_heartbeat(client, id=job_id, claim_token=claim_token)
-    )
-    background_tasks.add(job_heartbeat_task)
-    job_heartbeat_task.add_done_callback(background_tasks.discard)
-
-    # Initialising Nornir
+    # Initialising Nornir for managed and stand-alone modes
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
     InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
     nr = InitNornir(
@@ -274,7 +273,7 @@ async def main() -> int:
     logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
 
     # Closing task (managed mode)
-    if managed_mode:
+    if client:
         job_status = 'completed'
         # Uploading raw output
         for host_name, result in results.items():
