@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404 - required to run local dynamic inventory
 
 from nornir.core.inventory import (
     ConnectionOptions,
@@ -57,9 +57,10 @@ class NetDocAnsibleInventory:
             ValueError: if the process exits with a non-zero code or stdout is not valid JSON.
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 - inventory must be executed, shell=False is intentional and safer than shell=True
                 [path],
                 capture_output=True,
+                shell=False,
                 text=True,
                 check=True,
             )
