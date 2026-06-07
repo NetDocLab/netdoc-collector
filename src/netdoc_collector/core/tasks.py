@@ -5,11 +5,69 @@ inventory. It resolves the configured NetDoc plugin, executes device
 collection, and returns structured results.
 """
 
+import asyncio
+import logging
+import sys
 from pathlib import Path
 
+from netdoc_sdk.client import NetDocClient
 from nornir.core.task import Result, Task
 
 from netdoc_collector.plugins.dispatcher import get_plugin
+
+
+async def send_collector_heartbeat(
+    collector_client: NetDocClient, name: str, version: str, interval=30
+):
+    """Send periodic collector heartbeat to NetDoc server.
+
+    Sends a heartbeat signal at regular intervals (default 30 seconds) to indicate
+    the collector is alive and operational. Runs as an infinite background task.
+    On any failure, logs the error and exits the entire program with status code 1.
+
+    Args:
+        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
+        name (str): Name identifier for this collector instance.
+        version (str): Version of the collector software.
+        interval (int): Heartbeat interval in seconds. Defaults to 30.
+
+    Raises:
+        SystemExit: Exits the program (status 1) if heartbeat fails.
+    """
+    while True:
+        try:
+            await collector_client.collector_heartbeat(name=name, version=version)
+        except Exception as exc:
+            logging.error(exc.message)
+            sys.exit(1)
+        await asyncio.sleep(interval)
+
+
+async def send_job_heartbeat(
+    collector_client: NetDocClient, id: str, claim_token: str, interval=30
+):
+    """Send periodic job heartbeat to NetDoc server.
+
+    Sends a heartbeat signal at regular intervals (default 30 seconds) to indicate
+    the discovery job is still running and active. Runs as an infinite background task.
+    On any failure, logs the error and exits the entire program with status code 1.
+
+    Args:
+        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
+        id (str): Unique identifier for the discovery job.
+        claim_token (str): Authentication token to claim ownership of the job.
+        interval (int): Heartbeat interval in seconds. Defaults to 30.
+
+    Raises:
+        SystemExit: Exits the program (status 1) if heartbeat fails.
+    """
+    while True:
+        try:
+            await collector_client.discoveryjob_heartbeat(id=id, claim_token=claim_token)
+        except Exception as exc:
+            logging.error(exc.message)
+            sys.exit(1)
+        await asyncio.sleep(interval)
 
 
 def discovery_task(
