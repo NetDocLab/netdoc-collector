@@ -14,6 +14,7 @@ import ipaddress
 import json
 import logging
 import os
+import signal
 import socket
 import sys
 from datetime import datetime
@@ -28,7 +29,12 @@ from nornir.core.plugins.inventory import InventoryPluginRegister
 
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.scanner import NetworkScanner
-from netdoc_collector.core.tasks import discovery_task, send_collector_heartbeat, send_job_heartbeat
+from netdoc_collector.core.tasks import (
+    discovery_task,
+    mark_job_as_failed,
+    send_collector_heartbeat,
+    send_job_heartbeat,
+)
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
     LogListHandler,
@@ -215,6 +221,16 @@ async def main() -> int:
         claim_token = job.claim_token
         inventory = job.inventory
         logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
+
+        # Register cleanup handler for interrupt signals
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(
+                sig,
+                lambda: asyncio.ensure_future(
+                    mark_job_as_failed(client, id=job_id, claim_token=claim_token)
+                ),
+            )
 
         # Regurlary send job heartbeat
         job_heartbeat_task = asyncio.create_task(

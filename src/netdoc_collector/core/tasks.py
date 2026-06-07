@@ -70,6 +70,34 @@ async def send_job_heartbeat(
         await asyncio.sleep(interval)
 
 
+async def mark_job_as_failed(
+    collector_client: NetDocClient, id: str, claim_token: str, interval=30
+):
+    """Mark the current discovery job as failed and exit.
+
+    This helper attempts to complete the current discovery job with a failed
+    status when the collector is interrupted or when an unrecoverable error
+    occurs. If the completion call fails, the process exits with code 1.
+
+    Args:
+        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
+        id (str): Unique identifier for the discovery job.
+        claim_token (str): Authentication token to claim ownership of the job.
+        interval (int): Unused placeholder for compatibility with heartbeat helpers.
+
+    Raises:
+        SystemExit: Exits the program with status 1 if the failure callback cannot complete the job.
+    """
+    logging.error('Collector interrupted; marking discovery job as failed.')
+    try:
+        await collector_client.discoveryjob_complete(
+            id=id, claim_token=claim_token, status='failed'
+        )
+    except Exception as exc:
+        logging.error(exc)
+        sys.exit(1)
+
+
 def discovery_task(
     task: Task,
     report_path: Path,
