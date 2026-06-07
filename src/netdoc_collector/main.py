@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""NetDoc discoverer."""
+"""NetDoc collector command-line entrypoint and task orchestration.
+
+This module defines the asynchronous collector application that can run
+in either stand-alone or managed mode. It parses CLI arguments, loads
+configuration, initializes Nornir, executes discovery tasks, and handles
+upload of raw discovery payloads to the NetDoc backend.
+"""
 
 import argparse
 import asyncio
@@ -8,13 +14,13 @@ import ipaddress
 import json
 import logging
 import os
+import signal
 import socket
 import sys
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
 
-import netdoc_sdk
 import psutil
 from netdoc_sdk.client import NetDocClient
 from netdoc_sdk.exceptions import NetDocError, ValidationError
@@ -23,7 +29,12 @@ from nornir.core.plugins.inventory import InventoryPluginRegister
 
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.scanner import NetworkScanner
-from netdoc_collector.core.tasks import discovery_task
+from netdoc_collector.core.tasks import (
+    discovery_task,
+    mark_job_as_failed,
+    send_collector_heartbeat,
+    send_job_heartbeat,
+)
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
     LogListHandler,
@@ -47,6 +58,12 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> int:
+    """Parse CLI arguments and execute the NetDoc collector workflow.
+
+    Returns:
+        int: exit code; 0 on success, non-zero on failure.
+    """
+
     parser = argparse.ArgumentParser(description='NetDoc collector')
 
     # Scanner
@@ -100,25 +117,48 @@ async def main() -> int:
     inventory_file = args.inventory or cfg.get('inventory', 'inventory.json')
 
     # Reading arguments: managed mode
-    claim_token = None
-    client = None
-    collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
-    collector_version = version('netdoc-collector')
-    idempotency_key = None
-    job_id = None
     backend_data = cfg.get('backend', {})
     backend_timeout = args.timeout or backend_data.get('timeout') or 120
     backend_token = os.getenv('NETDOC_TOKEN') or args.token or backend_data.get('token')
     backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
     # backend_verify = args.verify or backend_data.get("verify", True)  # TODO
 
-    # Define managed or stand alone mode
-    managed = False
-    if backend_url and backend_token:
-        managed = True
+    # Managed mode configuration
+    background_tasks = set()
+    claim_token = None
+    client = None
+    collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
+    collector_version = version('netdoc-collector')
+    idempotency_key = None
+    job_id = None
 
-    if scan:
-        logging.info(f'Running in scan mode (managed={managed})')
+    # Evaluating mode
+    if backend_url and backend_token:
+        # Running in managed mode
+        logging.info(
+            'Running in managed mode (backend_url=%s, collector_name=%s)',
+            backend_url,
+            collector_name,
+        )
+        client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
+
+        # Regurlary send collector heartbeat
+        collector_heartbeat_task = asyncio.create_task(
+            send_collector_heartbeat(client, name=collector_name, version=collector_version)
+        )
+        background_tasks.add(collector_heartbeat_task)
+        collector_heartbeat_task.add_done_callback(background_tasks.discard)
+    elif scan:
+        # Running in stand-alone mode (scan)
+
+        # Load credentials from secrets.yaml
+        secrets = load_config('secrets.yaml')
+        credentials = secrets.get('credentials', {})
+        if not credentials:
+            logging.error('No credential found')
+            return 6
+
+        # Validate networks to scan
         networks = []
         if not input_networks:
             # Add local networks
@@ -130,11 +170,11 @@ async def main() -> int:
                     network = ipaddress.IPv4Network(f'{addr.address}/{addr.netmask}', strict=False)
 
                     if network.is_loopback:
-                        # Esclude loopback
+                        # Exclude loopback
                         continue
 
                     if not network.is_private:
-                        # Inlcude private networks only
+                        # Include private networks only
                         continue
 
                     networks.append(network)
@@ -144,17 +184,62 @@ async def main() -> int:
                     network = ipaddress.IPv4Network(input_network, strict=False)
                 except ipaddress.NetmaskValueError:
                     logging.error(f'Network {input_network} is invalid')
-                    sys.exit(1)
+                    return 5
                 networks.append(network)
+    elif inventory_file:
+        # Running in stand-alone mode (discovery)
+        logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
+        with open(inventory_file) as fh:
+            try:
+                inventory = json.load(fh)
+            except json.JSONDecodeError:
+                logger.error('Invalid JSON in inventory file: %s', inventory_file)
+                return 3
+    else:
+        logger.error('At least inventory_file or backend_url and backend_token are required')
+        return 4
 
-        if not managed:
-            # Load credentials from secrets.yaml
-            secrets = load_config('secrets.yaml')
-            credentials = secrets.get('credentials', {})
-            if not credentials:
-                logging.error('No credential found')
-                sys.exit(2)
+    # Cleaning older outputs
+    cleanup_old_snapshots(output_dir, retention)
 
+    if client:
+        # Managed mode
+
+        # Claim job
+        try:
+            job = await client.discoveryjob_claim()
+            if not job:
+                # Nothing to do
+                logging.info('No job to claim')
+                return 0
+        except ValidationError as exc:
+            logging.error(exc.message)
+            return 7
+
+        job_id = job.id
+        idempotency_key = job.idempotency_key
+        claim_token = job.claim_token
+        inventory = job.inventory
+        logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
+
+        # Register cleanup handler for interrupt signals
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(
+                sig,
+                lambda: asyncio.ensure_future(
+                    mark_job_as_failed(client, id=job_id, claim_token=claim_token)
+                ),
+            )
+
+        # Regurlary send job heartbeat
+        job_heartbeat_task = asyncio.create_task(
+            send_job_heartbeat(client, id=job_id, claim_token=claim_token)
+        )
+        background_tasks.add(job_heartbeat_task)
+        job_heartbeat_task.add_done_callback(background_tasks.discard)
+    elif scan:
+        # Stand-alone mode (scan)
         scanner = NetworkScanner(
             ports=[22, 23, 80, 443],
             timeout=0.5,
@@ -163,57 +248,18 @@ async def main() -> int:
         )
         hosts = [host async for host in scanner.scan(networks)]
         scanner.save_inventory(hosts, inventory_file)
-        sys.exit(0)
-
-    # Checking arguments
-    if backend_url and backend_token:
-        # Running in managed mode
-        managed_mode = True
-        logging.info(
-            'Running in managed mode (backend_url=%s, collector_name=%s)',
-            backend_url,
-            collector_name,
-        )
-        client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
-
-        # Heartbeat (login test)
-        try:
-            await client.collectors_heartbeat_create(
-                data={'name': collector_name, 'version': collector_version}
-            )
-            logging.info('Collector is logged in')
-        except netdoc_sdk.exceptions.ConnectionError as exc:
-            logging.error(exc)
-            return 1
-
-        # Claim
-        job = await client.discovery_jobs_claim_create()
-        if not job:
-            # Nothing to do
-            logging.info('No job to claim')
-            return 0
-
-        job_id = job.id
-        idempotency_key = job.idempotency_key
-        claim_token = job.claim_token
-        inventory = job.inventory
-        logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
-
-    elif inventory_file:
-        # Running in stand-alone mode
-        managed_mode = False
+        return 0
+    else:
+        # Stand-alone mode (discovery)
         logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         with open(inventory_file) as fh:
             try:
                 inventory = json.load(fh)
             except json.JSONDecodeError:
                 logger.error('Invalid JSON in inventory file: %s', inventory_file)
-                return 1
-    else:
-        logger.error('At least inventory_file or backend_url and backend_token are required')
-        return 1
+                return 8
 
-    # Initialising Nornir
+    # Initialising Nornir for managed and stand-alone modes
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
     InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
     nr = InitNornir(
@@ -243,7 +289,7 @@ async def main() -> int:
     logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
 
     # Closing task (managed mode)
-    if managed_mode:
+    if client:
         job_status = 'completed'
         # Uploading raw output
         for host_name, result in results.items():
@@ -277,7 +323,7 @@ async def main() -> int:
         if completed_hosts == 0:
             job_status = 'failed'
         try:
-            await client.discovery_jobs_complete_create(
+            await client.discovery_complete(
                 id=job_id,
                 claim_token=claim_token,
                 data={'status': job_status, 'log_messages': log_list_handler.records},
@@ -285,15 +331,17 @@ async def main() -> int:
             logging.info(f'Job {job_id} is {job_status}')
         except ValidationError as exc:
             logger.error('Failed to complete job: %s', exc)
-            return 2
+            return 10
 
-    # Cleaning older outputs
-    cleanup_old_snapshots(output_dir, retention)
-
-    return 1 if failed_hosts else 0
+    return 2 if failed_hosts else 0
 
 
 def entrypoint() -> int:
+    """Execute the collector entrypoint from a console script.
+
+    Returns:
+        int: exit code from :func:`main`.
+    """
     return asyncio.run(main())
 
 

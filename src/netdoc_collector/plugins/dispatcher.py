@@ -25,7 +25,7 @@ from .netmiko_linux import NetmikoLinuxAnyPlugin
 # Registry: (vendor, platform) -> plugin class
 # ---------------------------------------------------------------------------
 
-PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
+PLUGIN_REGISTRY: dict[str, type[BasePlugin]] = {
     'netmiko:allied_telesis:awplus:ssh': NetmikoAlliedTelesisAwplusPlugin,
     'netmiko:aruba:oscx:ssh': NetmikoArubaOscxPlugin,
     'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
@@ -43,24 +43,22 @@ PLUGIN_REGISTRY: dict[tuple[str, str], type[BasePlugin]] = {
 
 
 def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
-    """
-    Instantiate and return the correct plugin for a given vendor/platform.
+    """Instantiate the configured plugin for a registered NetDoc platform.
 
     Args:
-        vendor:    e.g. "cisco"
-        platform:  e.g. "ios"
-        host_name: Nornir host name
-        host_data: host.data dict from Nornir inventory
+        plugin (str): plugin identifier key, e.g. "netmiko:cisco:ios:ssh".
+        *args: positional arguments forwarded to the plugin constructor.
+        **kwargs: keyword arguments forwarded to the plugin constructor.
 
     Raises:
-        ValueError: if no plugin is registered for the (vendor, platform) pair.
+        ValueError: if no plugin is registered for the requested plugin key.
     """
 
     plugin_cls = PLUGIN_REGISTRY.get(plugin)
 
     if plugin_cls is None:
-        for v, p in PLUGIN_REGISTRY:
-            logging.debug('Registered plugin %s=%s', v, p)
+        for plugin_key, plugin_class in PLUGIN_REGISTRY.items():
+            logging.debug('Registered plugin %s=%s', plugin_key, plugin_class)
         raise ValueError(f"No plugin registered for plugin='{plugin}'")
 
     return plugin_cls(*args, **kwargs)

@@ -1,5 +1,7 @@
+"""Console entrypoint for the netdoc-collector package."""
+
 import sys
 
-from netdoc_discovery.main import main
+from netdoc_collector.main import entrypoint
 
-sys.exit(main())
+sys.exit(entrypoint())

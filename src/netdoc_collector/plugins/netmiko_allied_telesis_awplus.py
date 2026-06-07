@@ -10,6 +10,8 @@ from .base import BasePlugin
 
 
 class NetmikoAlliedTelesisAwplusPlugin(BasePlugin):
+    """Vendor plugin class for NetmikoAlliedTelesisAwplusPlugin."""
+
     @staticmethod
     def commands() -> list[str]:
         # Standard commands

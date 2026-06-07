@@ -1,0 +1,19 @@
+{
+    "_meta": {
+        "hostvars": {
+            "sw.example.com": {
+                "ansible_host": "192.168.1.2",
+                "ansible_password": "Passw0rd!",
+                "ansible_port": 22,
+                "ansible_user": "admin",
+                "netdoc_plugin": "netmiko:cisco:ios:ssh",
+                "netmiko_device_type": "cisco_ios"
+            }
+        }
+    },
+    "all": {
+        "hosts": [
+            "sw.example.com"
+        ]
+    }
+}

@@ -1,11 +1,8 @@
-"""
-network_scan.py - Async TCP network scanner for Linux (no root required).
+"""Async network scanner and host discovery utilities.
 
-Usage:
-  python network_scan.py 192.168.1.0/24
-  python network_scan.py 192.168.1.0/24 10.0.0.0/24 --ports 22 80 443
-  python network_scan.py 192.168.1.0/24 --concurrency 100 --timeout 1.5
-  python network_scan.py 192.168.1.0/24 --output results.json
+This module implements an asynchronous TCP port scanner that can optionally
+probe SSH endpoints with Netmiko to detect device types and map them to
+NetDoc plugins.
 """
 
 import asyncio
@@ -16,6 +13,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network
 from pathlib import Path
+from typing import Any
 
 from netmiko.exceptions import NetmikoAuthenticationException
 from netmiko.ssh_autodetect import SSHDetect
@@ -28,26 +26,38 @@ logger = logging.getLogger('scanner')
 # ─────────────────────────────────────────────
 @dataclass
 class HostResult:
+    """Result of a single host scan.
+
+    Attributes:
+        ip (str): host IP address.
+        port (int | None): first responsive port discovered.
+        netmiko_device_type (str | None): Netmiko autodetect device type.
+        netdoc_plugin (str | None): mapped NetDoc plugin identifier.
+        credential (dict[str]): credential record used for probing.
+    """
+
     ip: str
     port: int | None = None
     netmiko_device_type: str | None = None
     netdoc_plugin: str | None = None
-    credential: dict[str] = field(default_factory=dict)
-
-    def to_dict(self) -> dict:
-        return {'ip': self.ip, 'port': self.port, 'device_type': self.device_type}
+    credential: dict[str, str] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────
 #  Scanner
 # ─────────────────────────────────────────────
 class NetworkScanner:
+    """Asynchronous network scanner that detects responsive hosts.
+
+    The scanner can attempt SSH-based OS discovery for hosts with port 22 open.
+    """
+
     def __init__(
         self,
         ports: list[int],
         timeout: float,
         concurrency: int,
-        credentials: dict[str],
+        credentials: list[dict],
     ) -> None:
         self.ports = ports
         self.timeout = timeout
@@ -90,6 +100,7 @@ class NetworkScanner:
                     'username': username,
                     'password': password,
                 }
+                logging.error(device)
                 try:
                     guesser = SSHDetect(**device)
                 except NetmikoAuthenticationException:
@@ -114,9 +125,9 @@ class NetworkScanner:
         async with semaphore:
             tasks = {port: asyncio.create_task(self._check_port(ip, port)) for port in self.ports}
             open_ports = []
-            for port, task in tasks.items():
+            for open_port, task in tasks.items():
                 if await task:
-                    open_ports.append(port)
+                    open_ports.append(open_port)
             open_ports.sort()
 
         if not open_ports:
@@ -143,14 +154,14 @@ class NetworkScanner:
             elif netmiko_device_type == 'cisco_nxos':
                 netdoc_plugin = 'netmiko:cisco:nxos:ssh'
             elif netmiko_device_type == 'cisco_xr':
-                netdoc_plugin = 'netmiko_cisco_xr:ssh'
+                netdoc_plugin = 'netmiko:cisco_xr:ssh'
             elif netmiko_device_type == 'hp_comware':
                 netdoc_plugin = 'netmiko:hp:comware:ssh'
             elif netmiko_device_type == 'hp_procurve':
                 netdoc_plugin = 'netmiko:hp:procurve:ssh'
-            elif netmiko_device_type == 'huawei_vrp ':
+            elif netmiko_device_type == 'huawei_vrp':
                 netdoc_plugin = 'netmiko:huawei:vrp:ssh'
-            elif netmiko_device_type == 'linux ':
+            elif netmiko_device_type == 'linux':
                 netdoc_plugin = 'netmiko:linux::ssh'
 
         if not netdoc_plugin:
@@ -195,8 +206,13 @@ class NetworkScanner:
                     yield result
 
     async def scan(self, networks: list[IPv4Network]) -> AsyncIterator[HostResult]:
-        """
-        Async generator: yield HostResult for each active host across all networks.
+        """Yield HostResult objects for each active host in the target networks.
+
+        Args:
+            networks (list[IPv4Network]): list of networks to scan.
+
+        Yields:
+            HostResult: discovery result for each host with an open port.
 
         Usage:
             async for host in scanner.scan(["192.168.1.0/24"]):
@@ -212,8 +228,13 @@ class NetworkScanner:
 
     @staticmethod
     def save_inventory(hosts: list[HostResult], path: str) -> None:
-        """Save the inventory to a JSON file."""
-        inventory = {
+        """Save a host inventory file in standard Ansible JSON format.
+
+        Args:
+            hosts (list[HostResult]): discovered hosts to serialize.
+            path (str): path to the output JSON file.
+        """
+        inventory: dict[str, Any] = {
             '_meta': {'hostvars': {}},
             'all': {'hosts': []},
         }

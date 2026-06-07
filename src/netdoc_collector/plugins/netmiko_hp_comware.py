@@ -10,6 +10,8 @@ from .base import BasePlugin
 
 
 class NetmikoHpComwarePlugin(BasePlugin):
+    """Vendor plugin class for NetmikoHpComwarePlugin."""
+
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:
@@ -22,28 +24,27 @@ class NetmikoHpComwarePlugin(BasePlugin):
 
         # Standard commands
         return [
-            ('display current-configuration | include sysname', 'HOSTNAME'),
-            ('display current-configuration', None),
+            'display current-configuration',
             # Depending on version, "brief" may be unsupportted
-            ('display vlan brief', None),
-            ('display vlan all', None),
+            'display vlan brief',
+            'display vlan all',
             # Depending on version, "verbose" may be unsupportted
-            ('display lldp neighbor-information verbose', None),
-            ('display lldp neighbor-information list', None),
-            ('display ip vpn-instance', None),
-            ('display interface', None),
-            ('display ip interface', None),
-            ('display mac-address', None),
-            ('display link-aggregation verbose', None),
-            ('display_device_manuinfo', None),
+            'display lldp neighbor-information verbose',
+            'display lldp neighbor-information list',
+            'display ip vpn-instance',
+            'display interface',
+            'display ip interface',
+            'display mac-address',
+            'display link-aggregation verbose',
+            'display_device_manuinfo',
             # Unsupported
-            ('display version', None),
-            ('display logbuffer level 6', None),
-            ('display stp', None),
-            ('display port trunk', None),
-            ('display vrrp', None),
-            ('display ospf peer', None),
-            ('display bgp peer', None),
+            'display version',
+            'display logbuffer level 6',
+            'display stp',
+            'display port trunk',
+            'display vrrp',
+            'display ospf peer',
+            'display bgp peer',
         ]
 
     def collect(self, task: Task) -> dict[str, str]:

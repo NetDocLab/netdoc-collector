@@ -10,6 +10,8 @@ from .base import BasePlugin
 
 
 class NetmikoHuaweiVrpPlugin(BasePlugin):
+    """Vendor plugin class for NetmikoHuaweiVrpPlugin."""
+
     @staticmethod
     def commands(vrf=None) -> list[str]:
         if vrf:

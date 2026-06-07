@@ -3,8 +3,10 @@
 import json
 import logging
 import os
+import subprocess  # nosec B404 - required to run local dynamic inventory
 
 from nornir.core.inventory import (
+    ConnectionOptions,
     Defaults,
     Group,
     Groups,
@@ -20,27 +22,19 @@ class NetDocAnsibleInventory:
         self,
         inventory: str | dict,
     ) -> None:
-        """
-        Ansible Dynamic Inventory plugin supporting JSON files, dict and executable files.
+        """Ansible Dynamic Inventory plugin supporting JSON files, dict and executable files.
 
         Arguments:
             inventory: Path to valid Ansible JSON file, Ansible dynamic inventory, dict
-
         """
         if isinstance(inventory, dict):
-            # Inventory is already in dict format
             logging.info('Reading inventory from dict')
             self.inventory = inventory
         elif isinstance(inventory, str) and os.path.isfile(inventory):
-            # Inventory is a file
             if os.access(inventory, os.X_OK):
-                # Inventory is an executable file
                 logging.info('Reading inventory from executable file')
-                # TODO - should execute file and parse output instead of just reading it as JSON
-                with open(inventory) as fh:
-                    self.inventory = json.load(fh)
+                self.inventory = self._run_executable(inventory)
             else:
-                # Inventory is a non executable file
                 logging.info('Reading inventory from JSON file')
                 with open(inventory) as fh:
                     self.inventory = json.load(fh)
@@ -48,6 +42,37 @@ class NetDocAnsibleInventory:
             raise ValueError('Inventory is not valid')
 
         # TODO: should validate JSON format and trigger errors
+
+    @staticmethod
+    def _run_executable(path: str) -> dict:
+        """Execute a dynamic inventory script and parse its JSON output.
+
+        Args:
+            path: path to the executable inventory script.
+
+        Returns:
+            Parsed inventory dict.
+
+        Raises:
+            ValueError: if the process exits with a non-zero code or stdout is not valid JSON.
+        """
+        try:
+            result = subprocess.run(  # nosec B603 - inventory must be executed, shell=False is intentional and safer than shell=True
+                [path],
+                capture_output=True,
+                shell=False,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise ValueError(
+                f"Inventory script '{path}' exited with code {e.returncode}: {e.stderr.strip()}"
+            ) from e
+
+        try:
+            return json.loads(result.stdout)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Inventory script '{path}' returned invalid JSON: {e}") from e
 
     def load(self) -> Inventory:
         """Load items from remote API."""
@@ -58,14 +83,23 @@ class NetDocAnsibleInventory:
         # Add "all" group
         groups['all'] = Group('all')
 
+        # Load groups from top-level keys, excluding reserved Ansible keys
+        _RESERVED_KEYS = {'_meta', 'all'}
+        for group_name in self.inventory:
+            if group_name not in _RESERVED_KEYS:
+                groups[group_name] = Group(group_name)
+
         # Load hosts
         for inventory_hostname, host_data in self.inventory['_meta']['hostvars'].items():
-            # Create additional options
-            # netmiko_extras = {}
-            # if credential.enable_password:
-            #     extras["secret"] = credential.get_secrets().get("enable_password")
-            # connection_options = {"netmiko": ConnectionOptions(extras=netmiko_extras)}
-            connection_options = {}
+            connection_options: dict[str, ConnectionOptions] = {}
+
+            # Collect groups this host belongs to
+            host_groups = ParentGroups()
+            for group_name, group_data in self.inventory.items():
+                if group_name not in _RESERVED_KEYS and inventory_hostname in group_data.get(
+                    'hosts', []
+                ):
+                    host_groups.append(groups[group_name])
 
             hosts[inventory_hostname] = Host(
                 name=inventory_hostname,
@@ -75,15 +109,8 @@ class NetDocAnsibleInventory:
                 port=host_data.get('ansible_port'),
                 platform=host_data.get('netmiko_device_type'),
                 data=host_data,
-                groups=ParentGroups(),
+                groups=host_groups,
                 connection_options=connection_options,
             )
-
-            # Add groups
-            # TODO
-            # for host_group in host_groups:
-            #     if host_group not in dict(groups):
-            #         groups[host_group] = Group(host_group)
-            #     hosts[inventory_hostname].groups.append(Group(host_group))
 
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)

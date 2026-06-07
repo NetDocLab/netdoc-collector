@@ -10,6 +10,8 @@ from .base import BasePlugin
 
 
 class NetmikoHpProcurvePlugin(BasePlugin):
+    """Vendor plugin class for NetmikoHpProcurvePlugin."""
+
     @staticmethod
     def commands() -> list[str]:
         # Standard commands
