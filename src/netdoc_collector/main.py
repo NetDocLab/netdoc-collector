@@ -245,8 +245,9 @@ async def main() -> int:
             timeout=0.5,
             concurrency=num_workers * 10,
             credentials=credentials,
+            networks=networks,
         )
-        hosts = [host async for host in scanner.scan(networks)]
+        hosts = [host async for host in scanner.scan()]
         scanner.save_inventory(hosts, inventory_file)
         return 0
     else:

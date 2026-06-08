@@ -159,6 +159,7 @@ typeCheckingMode = "off"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "netdoc.settings.test"
 env = ["DJANGO_ENV=test"]
+env_files = [".env"]
 minversion = "7.0"
 addopts = "-v -ra --strict-markers --strict-config --cov=netdoc_collector --cov-report=term-missing"
 filterwarnings = [

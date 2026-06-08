@@ -58,11 +58,13 @@ class NetworkScanner:
         timeout: float,
         concurrency: int,
         credentials: list[dict],
+        networks: list[IPv4Network],
     ) -> None:
         self.ports = ports
         self.timeout = timeout
         self.concurrency = concurrency
         self.credentials = credentials
+        self.networks = networks
 
     async def _iter_hosts(self, network: IPv4Network) -> AsyncIterator[str]:
         """Yield each host IP in the network one at a time."""
@@ -93,14 +95,13 @@ class NetworkScanner:
 
             if username and password:
                 # OS probing via Netmiko (SSH)
-                logging.info(f'Probing OS on {ip} via Netmiko with credential {label}')
+                logger.info(f'Probing OS on {ip} via Netmiko with credential {label}')
                 device = {
                     'device_type': 'autodetect',
                     'host': ip,
                     'username': username,
                     'password': password,
                 }
-                logging.error(device)
                 try:
                     guesser = SSHDetect(**device)
                 except NetmikoAuthenticationException:
@@ -164,8 +165,12 @@ class NetworkScanner:
             elif netmiko_device_type == 'linux':
                 netdoc_plugin = 'netmiko:linux::ssh'
 
-        if not netdoc_plugin:
-            logger.info(f'OS has not been detected on host {ip}')
+        if netdoc_plugin:
+            logger.info(f'Host {ip} has been identified as {netdoc_plugin}')
+        else:
+            logger.info(
+                f'OS has not been detected on host {ip} (netmiko_device_type={netmiko_device_type})'
+            )
             return None
 
         return HostResult(
@@ -205,11 +210,8 @@ class NetworkScanner:
                 if (result := t.result()) is not None:
                     yield result
 
-    async def scan(self, networks: list[IPv4Network]) -> AsyncIterator[HostResult]:
+    async def scan(self) -> AsyncIterator[HostResult]:
         """Yield HostResult objects for each active host in the target networks.
-
-        Args:
-            networks (list[IPv4Network]): list of networks to scan.
 
         Yields:
             HostResult: discovery result for each host with an open port.
@@ -219,10 +221,10 @@ class NetworkScanner:
                 print(host.ip, host.open_ports)
 
         To collect a sorted list:
-            results = sorted([h async for h in scanner.scan(networks)],
+            results = sorted([h async for h in scanner.scan()],
                              key=lambda r: ipaddress.ip_address(r.ip))
         """
-        for network in networks:
+        for network in self.networks:
             async for host in self._scan_network(network):
                 yield host
 
