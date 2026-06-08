@@ -82,6 +82,7 @@ async def main() -> int:
 
     # Stand-alone mode
     parser.add_argument('-i', '--inventory', help='Override local inventory file')
+    parser.add_argument('-p', '--password', default='secrets.yaml', help='Path to secrets.yaml')
 
     # Managed mode
     parser.add_argument('-T', '--timeout', help='Override backend timeout', type=int)
@@ -152,7 +153,7 @@ async def main() -> int:
         # Running in stand-alone mode (scan)
 
         # Load credentials from secrets.yaml
-        secrets = load_config('secrets.yaml')
+        secrets = load_config(args.password)
         credentials = secrets.get('credentials', {})
         if not credentials:
             logging.error('No credential found')

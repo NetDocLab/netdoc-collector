@@ -1,5 +1,6 @@
 import os
 from ipaddress import IPv4Network
+
 import pytest
 
 
@@ -36,6 +37,4 @@ def ios_device():
 
 
 def skip_ios_device_tests():
-    if _get_ios_device().get('scan'):
-        return False
-    return True
+    return not _get_ios_device().get('scan')
