@@ -1901,7 +1901,7 @@ url = "../netdoc"
 
 [[package]]
 name = "netdoc-sdk"
-version = "0.2.5"
+version = "0.3.0"
 description = "Network Documentation Platform - SDK"
 optional = false
 python-versions = ">=3.12,<3.14"
@@ -3420,4 +3420,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "bd12b8f6720690f9509f1d6386e625bd722266addb99a481f74989c6f29907bf"
+content-hash = "37ba7c49a54c554d62ca220be29055f6085715535ef42251c7d3ecb8fd90a520"
