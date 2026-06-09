@@ -1,0 +1,167 @@
+from netdoc_sdk.models import InterfaceMode, InterfaceType, RouteProtocol
+
+from netdoc_collector.plugins.netmiko_cisco_nxos import NetmikoCiscoNXOSPlugin
+
+
+def test_to_netdok_obj_populates_device_data():
+    plugin = NetmikoCiscoNXOSPlugin(
+        host_name='inventory-host',
+        host_data={'ansible_host': '192.0.2.10', 'site': 'lab', 'role': 'leaf'},
+        report_path=None,
+    )
+    parsed_outputs = {
+        'show version': [
+            {
+                'hostname': 'nx1',
+                'serial': 'ABC123',
+                'os': '10.4(1)',
+                'platform': '9336C-FX2',
+                'uptime': '1 day(s), 2 hour(s), 3 minute(s), 4 second(s)',
+            }
+        ],
+        'show inventory': [{'name': 'Chassis', 'pid': 'N9K-C9336C-FX2', 'sn': 'CHASSIS123'}],
+        'show vlan': [{'vlan_id': '10', 'vlan_name': 'USERS', 'status': 'active'}],
+        'show vrf': [{'name': 'default', 'reason': '--'}],
+        'show interface': [
+            {
+                'interface': 'Ethernet1/1',
+                'link_status': 'up',
+                'hardware_type': '1000/10000 Ethernet',
+                'description': 'uplink',
+                'mac_address': 'aaaa.bbbb.cccc',
+                'mtu': '1500',
+                'speed': '10 Gb/s',
+                'bandwidth': '10000000 Kbit',
+                'ip_address': '10.0.0.1',
+                'prefix_length': '24',
+            }
+        ],
+        'show interface switchport': [
+            {
+                'interface': 'Ethernet1/1',
+                'switchport': 'Enabled',
+                'mode': 'trunk',
+                'native_vlan': '10',
+                'trunking_vlans': '10-12,20',
+            }
+        ],
+        'show ip interface vrf default': [
+            {
+                'vrf_name': 'default',
+                'interface': 'Ethernet1/1',
+                'primary_ip_address': '10.0.0.1',
+                'primary_ip_subnet': '10.0.0.0/24',
+                'secondary_ip_address': ['10.0.1.1'],
+                'secondary_ip_subnet': ['10.0.1.0/24'],
+                'mtu': '1500',
+            }
+        ],
+        'show ip route vrf all': [
+            {
+                'vrf': 'default',
+                'protocol': 'direct',
+                'network': '10.0.0.0',
+                'prefix_length': '24',
+                'distance': '0',
+                'metric': '0',
+                'nexthop_ip': '10.0.0.1',
+                'nexthop_if': 'Ethernet1/1',
+            }
+        ],
+        'show ip arp vrf default': [
+            {
+                'ip_address': '10.0.0.2',
+                'mac_address': '0000.1111.2222',
+                'interface': 'Ethernet1/1',
+            }
+        ],
+        'show mac address-table dynamic': [
+            {
+                'vlan_id': '10',
+                'mac_address': '0000.1111.2222',
+                'type': 'dynamic',
+                'ports': 'Ethernet1/1',
+            }
+        ],
+        'show lldp neighbors detail': [
+            {
+                'local_interface': 'Ethernet1/1',
+                'neighbor_name': 'nx2',
+                'neighbor_interface': 'Ethernet1/48',
+                'neighbor_description': 'Cisco NX-OS',
+                'capabilities': 'B',
+            }
+        ],
+    }
+
+    device = plugin.to_netdok_obj(
+        parsed_outputs,
+        {'show running-config': 'hostname nx1'},
+    )
+
+    assert device.hostname == 'nx1'
+    assert device.vendor == 'cisco'
+    assert device.model == 'N9K-C9336C-FX2'
+    assert device.platform == 'nxos'
+    assert device.serial_number == 'ABC123'
+    assert device.os_version == '10.4(1)'
+    assert device.uptime_seconds == 93784
+    assert device.mgmt_ip == '192.0.2.10'
+    assert device.site == 'lab'
+    assert device.role == 'leaf'
+    assert device.raw_config == 'hostname nx1'
+    assert device.parsed_state == parsed_outputs
+
+    assert device.vlans[0].vlan_id == 10
+    assert device.vrfs[0].name == 'default'
+
+    interface = device.interfaces[0]
+    assert interface.name == 'Ethernet1/1'
+    assert interface.interface_type == InterfaceType.ETHERNET
+    assert interface.mode == InterfaceMode.TRUNK
+    assert interface.speed_mbps == 10000
+    assert interface.native_vlan_id == 10
+    assert interface.allowed_vlan_ids == [10, 11, 12, 20]
+
+    assert {item.address for item in device.ip_addresses} == {
+        '10.0.0.1/24',
+        '10.0.1.1/24',
+    }
+    assert device.routes[0].protocol == RouteProtocol.CONNECTED
+    assert device.arp_entries[0].vrf_name == 'default'
+    assert device.mac_entries[0].interface_name == 'Ethernet1/1'
+    assert device.lldp_neighbors[0].remote_device == 'nx2'
+
+
+def test_to_netdok_obj_handles_missing_and_invalid_data():
+    plugin = NetmikoCiscoNXOSPlugin(
+        host_name='fallback-host',
+        host_data={},
+        report_path=None,
+    )
+    parsed_outputs = {
+        'show vlan': [{'vlan_id': 'not-a-vlan'}],
+        'show vrf': [{'reason': 'missing name'}],
+        'show interface': [{'description': 'missing interface name'}],
+        'show ip route vrf all': [{'network': '10.0.0.0'}],
+        'show ip arp vrf default': [
+            {'ip_address': '', 'mac_address': '0000.1111.2222', 'interface': ''}
+        ],
+        'show mac address-table dynamic': [
+            {'vlan_id': 'bad', 'mac_address': '0000.1111.2222', 'ports': 'Eth1/1'}
+        ],
+        'show lldp neighbors detail': [{'local_interface': 'Eth1/1'}],
+    }
+
+    device = plugin.to_netdok_obj(parsed_outputs)
+
+    assert device.hostname == 'fallback-host'
+    assert device.vendor == 'cisco'
+    assert device.platform == 'nxos'
+    assert device.vlans == []
+    assert device.vrfs == []
+    assert device.interfaces == []
+    assert device.routes == []
+    assert device.arp_entries == []
+    assert device.mac_entries == []
+    assert device.lldp_neighbors == []

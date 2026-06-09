@@ -347,6 +347,9 @@ async def main() -> int:
                     },
                     claim_token=claim_token,
                 )
+                logger.info("Upload completed for host '%s'",
+                    host_name,
+                )
             except NetDocError as e:
                 job_status = 'failed'
                 logger.error(
