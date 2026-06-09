@@ -12,7 +12,8 @@ workflow, tooling, and conventions used in this project.
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
 - [Commit Convention](#commit-convention)
-- [Running Tests](#running-tests)
+- [Running Unit Tests](#running-unit-tests)
+- [Running Integration Tests](#running-integration-tests)
 - [Code Quality](#code-quality)
 - [Releasing](#releasing)
 
@@ -214,7 +215,7 @@ See the migration guide: https://github.com/dainok/netdoc/wiki/migration-v2"
 
 ---
 
-## Running Tests
+## Running Unit Tests
 
 ```bash
 # Run full test suite with coverage report
@@ -236,6 +237,25 @@ open htmlcov/index.html
 
 The minimum required coverage is **80%**. The CI pipeline enforces this threshold
 and will fail if it is not met.
+
+---
+
+## Running Integration Tests
+
+A local Cisco IOS-XE device is required to run the integration tests. Create a .env file with the following information:
+
+```text
+NETDOC_DEVICE_ADDRESS='192.168.0.1'
+NETDOC_DEVICE_USERNAME='admin'
+NETDOC_DEVICE_PASSWORD='cisco'
+```
+
+Then run the integration tests:
+
+```bash
+# Run integration tests
+pytest pytest tests/integration -v
+```
 
 ---
 

@@ -9,7 +9,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  tests:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (collector)
@@ -21,8 +21,15 @@ jobs:
         with:
           repository: NetDocLab/netdoc
           path: netdoc
-          # Permission -> Content
+          # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
           token: ${{ secrets.NETDOC_REPO_TOKEN }}
+      - name: Checkout (SDK)
+        uses: actions/checkout@v6
+        with:
+          repository: NetDocLab/netdoc-sdk
+          path: netdoc-sdk
+          # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
+          token: ${{ secrets.NETDOC_SDK_REPO_TOKEN }}
       - name: Setup Python3
         uses: actions/setup-python@v6
         with:
@@ -49,7 +56,7 @@ jobs:
         run: make coverage
         working-directory: netdoc-collector
   snyk:
-    needs: tests
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

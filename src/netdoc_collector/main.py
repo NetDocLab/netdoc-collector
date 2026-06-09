@@ -82,6 +82,7 @@ async def main() -> int:
 
     # Stand-alone mode
     parser.add_argument('-i', '--inventory', help='Override local inventory file')
+    parser.add_argument('-p', '--password', default='secrets.yaml', help='Path to secrets.yaml')
 
     # Managed mode
     parser.add_argument('-T', '--timeout', help='Override backend timeout', type=int)
@@ -152,7 +153,7 @@ async def main() -> int:
         # Running in stand-alone mode (scan)
 
         # Load credentials from secrets.yaml
-        secrets = load_config('secrets.yaml')
+        secrets = load_config(args.password)
         credentials = secrets.get('credentials', {})
         if not credentials:
             logging.error('No credential found')
@@ -220,7 +221,7 @@ async def main() -> int:
         idempotency_key = job.idempotency_key
         claim_token = job.claim_token
         inventory = job.inventory
-        logging.info('Claimed job %s on %s devices', job_id, len(job.inventory['all']['hosts']))
+        logging.info('Claimed job %s on %s devices', job_id, len(inventory['all']['hosts']))
 
         # Register cleanup handler for interrupt signals
         loop = asyncio.get_running_loop()
@@ -245,8 +246,9 @@ async def main() -> int:
             timeout=0.5,
             concurrency=num_workers * 10,
             credentials=credentials,
+            networks=networks,
         )
-        hosts = [host async for host in scanner.scan(networks)]
+        hosts = [host async for host in scanner.scan()]
         scanner.save_inventory(hosts, inventory_file)
         return 0
     else:
@@ -301,7 +303,7 @@ async def main() -> int:
             netdoc_id = host.data.get('netdoc_id')
             raw_outputs = result[0].result
             try:
-                await client.discovery_push_discovered_device_create(
+                await client.discoveryjob_push_discovered_device(
                     id=job_id,
                     data={
                         'canonical_device': netdoc_id,
@@ -323,7 +325,7 @@ async def main() -> int:
         if completed_hosts == 0:
             job_status = 'failed'
         try:
-            await client.discovery_complete(
+            await client.discoveryjob_complete(
                 id=job_id,
                 claim_token=claim_token,
                 data={'status': job_status, 'log_messages': log_list_handler.records},

@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "netdoc-sdk==0.2.5",
+    "netdoc-sdk==0.3.0",
     "netmiko==4.6.0",
     "nornir==3.5.0",
     "nornir-netmiko==1.0.1",
@@ -74,6 +74,7 @@ pytest-env = "^1.6.0"
 pytest-django = "^4.12.0"
 djangorestframework = ">=3.14,<4.0"
 netdoc = {path = "../netdoc", develop = true}
+netdoc-sdk = {path = "../netdoc-sdk", develop = true}
 
 # Code quality
 mypy = ">=1.7"
@@ -159,6 +160,7 @@ typeCheckingMode = "off"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "netdoc.settings.test"
 env = ["DJANGO_ENV=test"]
+env_files = [".env"]
 minversion = "7.0"
 addopts = "-v -ra --strict-markers --strict-config --cov=netdoc_collector --cov-report=term-missing"
 filterwarnings = [
@@ -188,6 +190,7 @@ exclude = [
     "dist",
     "env",
     "migrations",
+    "scripts",
     "venv",
 ]
 
