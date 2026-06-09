@@ -85,17 +85,29 @@ class NetworkScanner:
         except (TimeoutError, ConnectionRefusedError, OSError):
             return False
 
-    def _probe_host_via_netmiko(self, ip: str):
-        """Probe OS via Netmiko (SSH)."""
-        device_type = None
+    def _probe_host_via_netmiko(self, ip: str) -> tuple[str | None, dict | None]:
+        """Probe the OS fingerprint of a host via Netmiko SSH autodetect.
+
+        Iterates over all configured credentials until one succeeds or all fail.
+
+        Args:
+            ip: target host IP address.
+
+        Returns:
+            A (device_type, credential) tuple on success, or (None, None) if
+            no credential matched or the device type could not be determined.
+        """
         for credential in self.credentials:
             label = credential.get('label')
             username = credential.get('username')
             password = credential.get('password')
 
             if username and password:
-                # OS probing via Netmiko (SSH)
-                logger.info(f'Probing OS on {ip} via Netmiko with credential {label}')
+                logger.info(
+                    'Probing OS on %s via Netmiko with credential %s',
+                    ip,
+                    label or '(unlabeled)',
+                )
                 device = {
                     'device_type': 'autodetect',
                     'host': ip,
@@ -105,13 +117,15 @@ class NetworkScanner:
                 try:
                     guesser = SSHDetect(**device)
                 except NetmikoAuthenticationException:
-                    # Login failed
+                    # Credential rejected — try the next one
+                    logger.debug('Credential %s rejected for %s', label or '(unlabeled)', ip)
                     continue
-                device_type = guesser.autodetect()
 
+                device_type = guesser.autodetect()
                 if device_type:
                     return device_type, credential
 
+        logger.error('No more credentials available for %s — all attempts failed', ip)
         return None, None
 
     async def _scan_host(
@@ -119,8 +133,8 @@ class NetworkScanner:
         ip: str,
         semaphore: asyncio.Semaphore,
     ) -> HostResult | None:
-        """
-        Scan all configured ports on a single host.
+        """Scan all configured ports on a single host.
+
         Returns a HostResult if at least one port is open, otherwise None.
         """
         async with semaphore:
@@ -131,6 +145,8 @@ class NetworkScanner:
                     open_ports.append(open_port)
             open_ports.sort()
 
+        # Release the semaphore before the blocking SSH probe so other
+        # hosts can proceed with port scanning while this one is being probed
         if not open_ports:
             return None
 
@@ -139,17 +155,20 @@ class NetworkScanner:
         netmiko_device_type = None
         netdoc_plugin = None
         port = None
+        credential = {}
 
         if 22 in open_ports:
-            # OS probing via Netmiko (SSH)
             port = 22
-            netmiko_device_type, credential = self._probe_host_via_netmiko(ip)
+            # Run the blocking Netmiko probe in a thread pool so it does not
+            # stall the event loop or hold the semaphore
+            netmiko_device_type, credential = await asyncio.to_thread(
+                self._probe_host_via_netmiko, ip
+            )
             if netmiko_device_type == 'allied_telesis_awplus':
                 netdoc_plugin = 'netmiko:allied_telesis:awplus:ssh'
             elif netmiko_device_type == 'aruba_oscx':
                 netdoc_plugin = 'netmiko:aruba:aoscx:ssh'
             elif netmiko_device_type in ['cisco_ios', 'cisco_xe']:
-                # Override device type
                 netmiko_device_type = 'cisco_ios'
                 netdoc_plugin = 'netmiko:cisco:ios:ssh'
             elif netmiko_device_type == 'cisco_nxos':
@@ -181,13 +200,20 @@ class NetworkScanner:
             port=port,
         )
 
-    async def _scan_network(self, network: IPv4Network) -> AsyncIterator[HostResult]:
-        """
-        Async generator: yield HostResult objects as hosts are scanned,
+    async def _scan_network(
+        self,
+        network: IPv4Network,
+        semaphore: asyncio.Semaphore | None = None,
+    ) -> AsyncIterator[HostResult]:
+        """Async generator: yield HostResult objects as hosts are scanned,
         without waiting for the entire subnet to complete.
         Keeps at most `concurrency` tasks in flight at any time.
+        A semaphore can be passed in to share the concurrency limit across
+        multiple networks scanned in parallel.
         """
-        semaphore = asyncio.Semaphore(self.concurrency)
+        if semaphore is None:
+            semaphore = asyncio.Semaphore(self.concurrency)
+
         pending: set[asyncio.Task] = set()
 
         num_addresses = '1 host' if network.prefixlen == 32 else f'{network.num_addresses} hosts'
@@ -213,20 +239,49 @@ class NetworkScanner:
     async def scan(self) -> AsyncIterator[HostResult]:
         """Yield HostResult objects for each active host in the target networks.
 
+        All networks are scanned concurrently using a single shared semaphore,
+        so the concurrency limit applies globally rather than per subnet.
+        Results are yielded as soon as they become available, regardless of
+        network order.
+
         Yields:
             HostResult: discovery result for each host with an open port.
 
         Usage:
-            async for host in scanner.scan(["192.168.1.0/24"]):
+            async for host in scanner.scan():
                 print(host.ip, host.open_ports)
 
         To collect a sorted list:
             results = sorted([h async for h in scanner.scan()],
                              key=lambda r: ipaddress.ip_address(r.ip))
         """
-        for network in self.networks:
-            async for host in self._scan_network(network):
-                yield host
+        queue: asyncio.Queue[HostResult | None] = asyncio.Queue()
+
+        # One semaphore shared across all networks to enforce the global concurrency limit
+        semaphore = asyncio.Semaphore(self.concurrency)
+
+        async def _producer(network: IPv4Network) -> None:
+            """Scan a single network and forward every result to the shared queue."""
+            async for host in self._scan_network(network, semaphore):
+                await queue.put(host)
+
+        # Launch all network scans concurrently
+        producers = [asyncio.create_task(_producer(network)) for network in self.networks]
+
+        async def _wait_all() -> None:
+            """Wait for all producers to finish, then push a sentinel to unblock the consumer."""
+            await asyncio.gather(*producers)
+            await queue.put(None)
+
+        # Keep a reference to prevent the task from being garbage-collected
+        wait_task = asyncio.create_task(_wait_all())
+
+        # Consume results until the sentinel None is received
+        while (result := await queue.get()) is not None:
+            yield result
+
+        # Ensure any exception raised inside _wait_all is propagated
+        await wait_task
 
     @staticmethod
     def save_inventory(hosts: list[HostResult], path: str) -> None:

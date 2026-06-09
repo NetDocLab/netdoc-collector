@@ -17,76 +17,79 @@ from netdoc_collector.plugins.dispatcher import get_plugin
 
 
 async def send_collector_heartbeat(
-    collector_client: NetDocClient, name: str, version: str, interval=30
-):
+    collector_client: NetDocClient,
+    name: str,
+    version: str,
+    stop_event: asyncio.Event,
+    interval: int = 30,
+) -> None:
     """Send periodic collector heartbeat to NetDoc server.
 
-    Sends a heartbeat signal at regular intervals (default 30 seconds) to indicate
-    the collector is alive and operational. Runs as an infinite background task.
-    On any failure, logs the error and exits the entire program with status code 1.
+    Sends a heartbeat signal at regular intervals to indicate the collector is
+    alive and operational. Runs until `stop_event` is set. On any failure, logs
+    the error and signals the stop event so the main loop can exit cleanly.
 
     Args:
-        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
-        name (str): Name identifier for this collector instance.
-        version (str): Version of the collector software.
-        interval (int): Heartbeat interval in seconds. Defaults to 30.
-
-    Raises:
-        SystemExit: Exits the program (status 1) if heartbeat fails.
+        collector_client: Client instance for communicating with NetDoc server.
+        name: Name identifier for this collector instance.
+        version: Version of the collector software.
+        stop_event: Event used to signal the main loop to stop.
+        interval: Heartbeat interval in seconds. Defaults to 30.
     """
-    while True:
+    while not stop_event.is_set():
         try:
             await collector_client.collector_heartbeat(name=name, version=version)
         except Exception as exc:
-            logging.error(exc)
-            sys.exit(1)
+            logging.error('Collector heartbeat failed: %s', exc)
+            stop_event.set()
+            return
         await asyncio.sleep(interval)
 
 
 async def send_job_heartbeat(
-    collector_client: NetDocClient, id: str, claim_token: str, interval=30
-):
+    collector_client: NetDocClient,
+    id: str,
+    claim_token: str,
+    stop_event: asyncio.Event,
+    interval: int = 30,
+) -> None:
     """Send periodic job heartbeat to NetDoc server.
 
-    Sends a heartbeat signal at regular intervals (default 30 seconds) to indicate
-    the discovery job is still running and active. Runs as an infinite background task.
-    On any failure, logs the error and exits the entire program with status code 1.
+    Sends a heartbeat signal at regular intervals to indicate the discovery job
+    is still running. Runs until `stop_event` is set. On any failure, logs the
+    error and signals the stop event so the main loop can exit cleanly.
 
     Args:
-        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
-        id (str): Unique identifier for the discovery job.
-        claim_token (str): Authentication token to claim ownership of the job.
-        interval (int): Heartbeat interval in seconds. Defaults to 30.
-
-    Raises:
-        SystemExit: Exits the program (status 1) if heartbeat fails.
+        collector_client: Client instance for communicating with NetDoc server.
+        id: Unique identifier for the discovery job.
+        claim_token: Authentication token to claim ownership of the job.
+        stop_event: Event used to signal the main loop to stop.
+        interval: Heartbeat interval in seconds. Defaults to 30.
     """
-    while True:
+    while not stop_event.is_set():
         try:
             await collector_client.discoveryjob_heartbeat(id=id, claim_token=claim_token)
         except Exception as exc:
-            logging.error(exc)
-            sys.exit(1)
+            logging.error('Job heartbeat failed: %s', exc)
+            stop_event.set()
+            return
         await asyncio.sleep(interval)
 
 
 async def mark_job_as_failed(
-    collector_client: NetDocClient, id: str, claim_token: str, interval=30
-):
-    """Mark the current discovery job as failed and exit.
+    collector_client: NetDocClient,
+    id: str,
+    claim_token: str,
+) -> None:
+    """Mark the current discovery job as failed.
 
-    This helper attempts to complete the current discovery job with a failed
-    status when the collector is interrupted or when an unrecoverable error
-    occurs. If the completion call fails, the process exits with code 1.
+    Attempts to complete the current discovery job with a failed status when
+    the collector is interrupted or an unrecoverable error occurs.
 
     Args:
-        collector_client (NetDocClient): Client instance for communicating with NetDoc server.
-        id (str): Unique identifier for the discovery job.
-        claim_token (str): Authentication token to claim ownership of the job.
-        interval (int): Unused placeholder for compatibility with heartbeat helpers.
-
-    Raises:
-        SystemExit: Exits the program with status 1 if the failure callback cannot complete the job.
+        collector_client: Client instance for communicating with NetDoc server.
+        id: Unique identifier for the discovery job.
+        claim_token: Authentication token to claim ownership of the job.
     """
     logging.error('Collector interrupted; marking discovery job as failed.')
     try:
@@ -94,7 +97,7 @@ async def mark_job_as_failed(
             id=id, claim_token=claim_token, status='failed'
         )
     except Exception as exc:
-        logging.error(exc)
+        logging.error('Failed to mark job as failed: %s', exc)
         sys.exit(1)
 
 
@@ -106,12 +109,12 @@ def discovery_task(
     """Execute the NetDoc plugin discovery workflow for one host.
 
     Args:
-        task (Task): Nornir task object representing the host execution context.
-        report_path (Path): directory where raw output reports are stored.
-        cmd_timeout (int | None): override command timeout for this host.
+        task: Nornir task object representing the host execution context.
+        report_path: Directory where raw output reports are stored.
+        cmd_timeout: Override command timeout for this host.
 
     Returns:
-        Result: Nornir Result object containing plugin output or failure.
+        Nornir Result object containing plugin output or failure details.
     """
     host = task.host
     netdoc_plugin = host.data.get('netdoc_plugin')
