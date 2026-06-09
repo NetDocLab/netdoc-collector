@@ -12,7 +12,8 @@ workflow, tooling, and conventions used in this project.
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
 - [Commit Convention](#commit-convention)
-- [Running Tests](#running-tests)
+- [Running Unit Tests](#running-unit-tests)
+- [Running Integration Tests](#running-integration-tests)
 - [Code Quality](#code-quality)
 - [Releasing](#releasing)
 

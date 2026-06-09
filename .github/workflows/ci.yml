@@ -56,7 +56,7 @@ jobs:
         run: make coverage
         working-directory: netdoc-collector
   snyk:
-    needs: tests
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
