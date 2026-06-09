@@ -151,6 +151,7 @@ async def main() -> int:
         collector_heartbeat_task.add_done_callback(background_tasks.discard)
     elif scan:
         # Running in stand-alone mode (scan)
+        logging.info('Running in stand-alone mode (scan)')
 
         # Load credentials from secrets.yaml
         secrets = load_config(args.password)
@@ -200,9 +201,6 @@ async def main() -> int:
         logger.error('At least inventory_file or backend_url and backend_token are required')
         return 4
 
-    # Cleaning older outputs
-    cleanup_old_snapshots(output_dir, retention)
-
     if client:
         # Managed mode
 
@@ -241,13 +239,15 @@ async def main() -> int:
         job_heartbeat_task.add_done_callback(background_tasks.discard)
     elif scan:
         # Stand-alone mode (scan)
+        scan_workers = num_workers * 10
         scanner = NetworkScanner(
             ports=[22, 23, 80, 443],
             timeout=0.5,
-            concurrency=num_workers * 10,
+            concurrency=scan_workers,
             credentials=credentials,
             networks=networks,
         )
+        logging.info(f'Starting scan with {scan_workers} workers')
         hosts = [host async for host in scanner.scan()]
         scanner.save_inventory(hosts, inventory_file)
         return 0
@@ -289,6 +289,9 @@ async def main() -> int:
     failed_hosts = sum(1 for r in results.values() if r.failed)
     completed_hosts = total_hosts - failed_hosts
     logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
+
+    # Cleaning older outputs
+    cleanup_old_snapshots(output_dir, retention)
 
     # Closing task (managed mode)
     if client:

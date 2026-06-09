@@ -68,7 +68,8 @@ class BasePlugin(ABC):
                 return parsed_output
         except TextFSMError:
             pass
-        logging.warning(f"Cannot parse command '{cmd}'")
+        if 'vrf' in cmd:
+            logging.warning(f"Cannot parse command '{cmd}'")
         return None
 
     @staticmethod
