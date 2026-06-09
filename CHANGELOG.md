@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.0...v0.4.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* improve scanner performance and logging ([f658d4b](https://github.com/NetDocLab/netdoc-collector/commit/f658d4ba5bd3194a671293394ead0900c12ae49e))
+* trigger exit on heartbeat task ([6899897](https://github.com/NetDocLab/netdoc-collector/commit/6899897dda0400cdbf4b9076092530b16794e992))
+* update sdk ([f428aab](https://github.com/NetDocLab/netdoc-collector/commit/f428aab8d7f3e182bd11f063177c315c9ce8f3b5))
+* update sdk functions ([66d5f49](https://github.com/NetDocLab/netdoc-collector/commit/66d5f49040449859f4db6d6bd124de486dcd45d9))
+
 ## [0.4.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.3.0...v0.4.0) (2026-06-07)
 
 
