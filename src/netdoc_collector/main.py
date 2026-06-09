@@ -57,6 +57,17 @@ logging.getLogger().addHandler(log_list_handler)
 logger = logging.getLogger(__name__)
 
 
+def _cancel_background_tasks(background_tasks: set[asyncio.Task]) -> None:
+    """Cancel all background tasks and discard them from the set.
+
+    Args:
+        background_tasks: set of running background tasks to cancel.
+    """
+    for task in list(background_tasks):
+        task.cancel()
+    background_tasks.clear()
+
+
 async def main() -> int:
     """Parse CLI arguments and execute the NetDoc collector workflow.
 
@@ -125,13 +136,16 @@ async def main() -> int:
     # backend_verify = args.verify or backend_data.get("verify", True)  # TODO
 
     # Managed mode configuration
-    background_tasks = set()
+    background_tasks: set[asyncio.Task] = set()
     claim_token = None
     client = None
     collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
     collector_version = version('netdoc-collector')
     idempotency_key = None
     job_id = None
+
+    # Shared stop event: any background task can set this to request a clean shutdown.
+    stop_event = asyncio.Event()
 
     # Evaluating mode
     if backend_url and backend_token:
@@ -143,9 +157,14 @@ async def main() -> int:
         )
         client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
 
-        # Regurlary send collector heartbeat
+        # Periodically send a collector heartbeat; stop_event is set on failure.
         collector_heartbeat_task = asyncio.create_task(
-            send_collector_heartbeat(client, name=collector_name, version=collector_version)
+            send_collector_heartbeat(
+                client,
+                name=collector_name,
+                version=collector_version,
+                stop_event=stop_event,
+            )
         )
         background_tasks.add(collector_heartbeat_task)
         collector_heartbeat_task.add_done_callback(background_tasks.discard)
@@ -185,7 +204,7 @@ async def main() -> int:
                 try:
                     network = ipaddress.IPv4Network(input_network, strict=False)
                 except ipaddress.NetmaskValueError:
-                    logging.error(f'Network {input_network} is invalid')
+                    logging.error('Network %s is invalid', input_network)
                     return 5
                 networks.append(network)
     elif inventory_file:
@@ -210,9 +229,11 @@ async def main() -> int:
             if not job:
                 # Nothing to do
                 logging.info('No job to claim')
+                _cancel_background_tasks(background_tasks)
                 return 0
         except ValidationError as exc:
             logging.error(exc.message)
+            _cancel_background_tasks(background_tasks)
             return 7
 
         job_id = job.id
@@ -231,9 +252,14 @@ async def main() -> int:
                 ),
             )
 
-        # Regurlary send job heartbeat
+        # Periodically send a job heartbeat; stop_event is set on failure.
         job_heartbeat_task = asyncio.create_task(
-            send_job_heartbeat(client, id=job_id, claim_token=claim_token)
+            send_job_heartbeat(
+                client,
+                id=job_id,
+                claim_token=claim_token,
+                stop_event=stop_event,
+            )
         )
         background_tasks.add(job_heartbeat_task)
         job_heartbeat_task.add_done_callback(background_tasks.discard)
@@ -247,7 +273,7 @@ async def main() -> int:
             credentials=credentials,
             networks=networks,
         )
-        logging.info(f'Starting scan with {scan_workers} workers')
+        logging.info('Starting scan with %d workers', scan_workers)
         hosts = [host async for host in scanner.scan()]
         scanner.save_inventory(hosts, inventory_file)
         return 0
@@ -260,6 +286,12 @@ async def main() -> int:
             except json.JSONDecodeError:
                 logger.error('Invalid JSON in inventory file: %s', inventory_file)
                 return 8
+
+    # Abort early if a heartbeat already failed during setup.
+    if stop_event.is_set():
+        logging.error('A background task failed during setup; aborting.')
+        _cancel_background_tasks(background_tasks)
+        return 9
 
     # Initialising Nornir for managed and stand-alone modes
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
@@ -333,10 +365,14 @@ async def main() -> int:
                 claim_token=claim_token,
                 data={'status': job_status, 'log_messages': log_list_handler.records},
             )
-            logging.info(f'Job {job_id} is {job_status}')
+            logging.info('Job %s is %s', job_id, job_status)
         except ValidationError as exc:
             logger.error('Failed to complete job: %s', exc)
+            _cancel_background_tasks(background_tasks)
             return 10
+
+    # Cancel all background tasks before exiting cleanly.
+    _cancel_background_tasks(background_tasks)
 
     return 2 if failed_hosts else 0
 
