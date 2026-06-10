@@ -50,7 +50,7 @@ class BasePlugin(ABC):
             self.report_path.mkdir(exist_ok=True, parents=True)
 
     @staticmethod
-    def parse_netmiko_output(raw_output, platform, cmd) -> None | list:
+    def parse_netmiko_output(raw_text, platform, cmd) -> None | list:
         """Parse raw Netmiko command output to structured data.
 
         Args:
@@ -62,10 +62,10 @@ class BasePlugin(ABC):
             None | list: parsed output list, or None when parsing is unavailable.
         """
         try:
-            parsed_output: list = get_structured_data(raw_output, platform=platform, command=cmd)
-            if isinstance(parsed_output, list):
+            parsed_text: list = get_structured_data(raw_text, platform=platform, command=cmd)
+            if isinstance(parsed_text, list):
                 # Valid output is a list
-                return parsed_output
+                return parsed_text
         except TextFSMError:
             pass
         if 'vrf' in cmd:
@@ -99,7 +99,6 @@ class BasePlugin(ABC):
         """
         logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
         try:
-            parsed_output = None
             cmd_result: MultiResult = task.run(
                 task=netmiko_send_command,
                 command_string=cmd,
@@ -119,12 +118,12 @@ class BasePlugin(ABC):
             raise
 
         # Dump output files
-        raw_output = cmd_result.result
-        parsed_output = self.parse_netmiko_output(raw_output, platform, cmd)
-        self.write_output(raw_output, cmd)
-        self.write_output(parsed_output, cmd)
+        raw_text = cmd_result.result
+        parsed_text = self.parse_netmiko_output(raw_text, platform, cmd)
+        self.write_output(raw_text, cmd)
+        self.write_output(parsed_text, cmd)
 
-        return raw_output, parsed_output
+        return raw_text, parsed_text
 
     def write_output(self, content, log) -> None:
         """Write raw or structured command output to the report path.

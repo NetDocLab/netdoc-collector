@@ -85,7 +85,7 @@ class NetworkScanner:
         except (TimeoutError, ConnectionRefusedError, OSError):
             return False
 
-    def _probe_host_via_netmiko(self, ip: str) -> tuple[str | None, dict | None]:
+    def _probe_host_via_netmiko(self, ip: str) -> tuple[str | None, dict[str, str] | None]:
         """Probe the OS fingerprint of a host via Netmiko SSH autodetect.
 
         Iterates over all configured credentials until one succeeds or all fail.
@@ -155,15 +155,16 @@ class NetworkScanner:
         netmiko_device_type = None
         netdoc_plugin = None
         port = None
-        credential = {}
+        credential: dict[str, str] = {}
 
         if 22 in open_ports:
             port = 22
             # Run the blocking Netmiko probe in a thread pool so it does not
             # stall the event loop or hold the semaphore
-            netmiko_device_type, credential = await asyncio.to_thread(
+            netmiko_device_type, matched_credential = await asyncio.to_thread(
                 self._probe_host_via_netmiko, ip
             )
+            credential = matched_credential or {}
             if netmiko_device_type == 'allied_telesis_awplus':
                 netdoc_plugin = 'netmiko:allied_telesis:awplus:ssh'
             elif netmiko_device_type == 'aruba_oscx':
