@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.1...v0.4.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* add log after upload has been completed ([0decfa5](https://github.com/NetDocLab/netdoc-collector/commit/0decfa5c62240d825b38320b0ca078b5abde7a16))
+* fix main and base to upload parsed log ([55ced21](https://github.com/NetDocLab/netdoc-collector/commit/55ced2138995690a68154cf823c4baa8d1889358))
+* fix upload function ([b5670a2](https://github.com/NetDocLab/netdoc-collector/commit/b5670a201fa4b88056ea1dbc4801f500ed52702d))
+* update plugins to send parsed output ([501162b](https://github.com/NetDocLab/netdoc-collector/commit/501162bb2ce72f7a7af5a1aa970e1109fcf2a923))
+* upload parsed_output to backend ([67148c6](https://github.com/NetDocLab/netdoc-collector/commit/67148c69d1e93e5a20b6bc09b448f13856790ec4))
+
 ## [0.4.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.0...v0.4.1) (2026-06-09)
 
 
