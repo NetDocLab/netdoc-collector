@@ -279,7 +279,7 @@ async def main() -> int:
         return 0
     else:
         # Stand-alone mode (discovery)
-        logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
+        logging.info('Reading inventory_file=%s', inventory_file)
         with open(inventory_file) as fh:
             try:
                 inventory = json.load(fh)
@@ -336,18 +336,19 @@ async def main() -> int:
 
             host = nr.inventory.hosts[host_name]
             netdoc_id = host.data.get('netdoc_id')
-            raw_outputs = result[0].result
+            raw_payload = result[0].result
             try:
                 await client.discoveryjob_push_discovered_device(
                     id=job_id,
                     data={
                         'canonical_device': netdoc_id,
-                        'raw_payload': raw_outputs,
                         'idempotency_key': idempotency_key,
+                        **raw_payload,
                     },
                     claim_token=claim_token,
                 )
-                logger.info("Upload completed for host '%s'",
+                logger.info(
+                    "Upload completed for host '%s'",
                     host_name,
                 )
             except NetDocError as e:
