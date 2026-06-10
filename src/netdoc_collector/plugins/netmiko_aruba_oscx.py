@@ -42,7 +42,7 @@ class NetmikoArubaOscxPlugin(BasePlugin):
             'show spanning-tree',
         ]
 
-    def collect(self, task: Task) -> dict[str, str]:
+    def collect(self, task: Task) -> dict[str, dict]:
         host = task.host
         netmiko_device_type = host.data.get('netmiko_device_type')
         raw_payload: dict[str, str] = {}
@@ -68,5 +68,4 @@ class NetmikoArubaOscxPlugin(BasePlugin):
         except Exception:
             logging.error(f'Stopping collection on {self.host_name} due to error')
 
-        raw_output = {'raw_payload': raw_payload, 'parsed_payload': parsed_payload}
-        return raw_output
+        return {'raw_payload': raw_payload, 'parsed_payload': parsed_payload}
