@@ -33,6 +33,9 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show cdp neighbors detail',
             'show device-tracking database',
             'show dot1x all',
+            'show env fan',
+            'show env power all',
+            'show env temperature',
             'show etherchannel summary',
             'show glbp',
             'show interfaces status',
@@ -45,12 +48,15 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ip interface',
             'show ip ospf neighbor',
             'show isis neighbors',
+            'show license status',
+            'show license summary',
             'show lldp neighbors detail',
             'show logging last 200',
             'show mac address-table dynamic',
             'show running-config',
             'show spanning-tree',
             'show standby',
+            'show switch stack-ports',
             'show switch',
             'show version',
             'show vlan',
@@ -84,4 +90,4 @@ class NetmikoCiscoIosPlugin(BasePlugin):
         except Exception:
             logging.error(f'Stopping collection on {self.host_name} due to error')
 
-        return {'raw_payload': raw_payload, 'parsed_payload': parsed_payload}
+        return {'raw_output': raw_payload, 'parsed_output': parsed_payload}

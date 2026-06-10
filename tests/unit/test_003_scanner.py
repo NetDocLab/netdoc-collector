@@ -118,7 +118,9 @@ class TestProbeHostViaNetmiko:
         return g
 
     def test_returns_device_type_and_credential(self, scanner):
-        with patch('scanner.SSHDetect', return_value=self._make_guesser('cisco_ios')):
+        with patch(
+            'netdoc_collector.core.scanner.SSHDetect', return_value=self._make_guesser('cisco_ios')
+        ):
             device_type, cred = scanner._probe_host_via_netmiko('10.0.0.1')
         assert device_type == 'cisco_ios'
         assert cred == scanner.credentials[0]
@@ -126,7 +128,9 @@ class TestProbeHostViaNetmiko:
     def test_skips_credential_without_username(self, credentials):
         creds = [{'label': 'empty'}, {'label': 'ok', 'username': 'u', 'password': 'p'}]
         s = NetworkScanner(ports=[22], timeout=1, concurrency=5, credentials=creds, networks=[])
-        with patch('scanner.SSHDetect', return_value=self._make_guesser('linux')) as mock_ssh:
+        with patch(
+            'netdoc_collector.core.scanner.SSHDetect', return_value=self._make_guesser('linux')
+        ) as mock_ssh:
             device_type, _cred = s._probe_host_via_netmiko('10.0.0.1')
         # SSHDetect should only be called once (second credential)
         assert mock_ssh.call_count == 1
@@ -136,7 +140,7 @@ class TestProbeHostViaNetmiko:
         from netmiko.exceptions import NetmikoAuthenticationException
 
         with patch(
-            'scanner.SSHDetect',
+            'netdoc_collector.core.scanner.SSHDetect',
             side_effect=[
                 NetmikoAuthenticationException('bad creds'),
                 self._make_guesser('aruba_oscx'),
@@ -149,13 +153,18 @@ class TestProbeHostViaNetmiko:
     def test_all_credentials_fail_returns_none(self, scanner):
         from netmiko.exceptions import NetmikoAuthenticationException
 
-        with patch('scanner.SSHDetect', side_effect=NetmikoAuthenticationException('fail')):
+        with patch(
+            'netdoc_collector.core.scanner.SSHDetect',
+            side_effect=NetmikoAuthenticationException('fail'),
+        ):
             device_type, cred = scanner._probe_host_via_netmiko('10.0.0.1')
         assert device_type is None
         assert cred is None
 
     def test_autodetect_returns_none(self, scanner):
-        with patch('scanner.SSHDetect', return_value=self._make_guesser(None)):
+        with patch(
+            'netdoc_collector.core.scanner.SSHDetect', return_value=self._make_guesser(None)
+        ):
             device_type, _cred = scanner._probe_host_via_netmiko('10.0.0.1')
         # Loop continues, next credential also returns None → final result is None
         assert device_type is None
@@ -333,7 +342,7 @@ class TestScan:
             credential=cred,
         )
 
-        async def fake_scan_network(network):
+        async def fake_scan_network(network, semaphore=None):
             yield good_host
 
         with patch.object(scanner, '_scan_network', side_effect=fake_scan_network):
@@ -349,7 +358,7 @@ class TestScan:
 
         seen_networks = []
 
-        async def fake_scan_network(network):
+        async def fake_scan_network(network, semaphore=None):
             seen_networks.append(network)
             return
             yield  # make it an async generator

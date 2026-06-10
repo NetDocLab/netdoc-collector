@@ -343,7 +343,7 @@ async def main() -> int:
                     data={
                         'canonical_device': netdoc_id,
                         'idempotency_key': idempotency_key,
-                        **raw_payload,
+                        'raw_payload': raw_payload,
                     },
                     claim_token=claim_token,
                 )

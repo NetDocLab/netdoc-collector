@@ -75,4 +75,4 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
         except Exception:
             logging.error(f'Stopping collection on {self.host_name} due to error')
 
-        return {'raw_payload': raw_payload, 'parsed_payload': parsed_payload}
+        return {'raw_output': raw_payload, 'parsed_output': parsed_payload}
