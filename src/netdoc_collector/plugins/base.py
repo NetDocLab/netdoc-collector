@@ -98,6 +98,20 @@ class BasePlugin(ABC):
             tuple[str, None | list]: raw output and parsed structured output.
         """
         logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
+
+        try:
+            # Get or open Netmiko connection
+            net_connect = task.host.get_connection('netmiko', task.nornir.config)
+
+            # Privilege escalation only if required
+            if net_connect.secret and not net_connect.check_enable_mode():
+                logger.info(f'Entering enable mode on {self.host_name}')
+                net_connect.enable()
+
+        except Exception as e:
+            logger.error(f'Failed to enter enable mode on {self.host_name}: {e}')
+            raise
+
         try:
             cmd_result: MultiResult = task.run(
                 task=netmiko_send_command,

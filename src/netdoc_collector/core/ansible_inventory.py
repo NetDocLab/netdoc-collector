@@ -101,6 +101,17 @@ class NetDocAnsibleInventory:
                 ):
                     host_groups.append(groups[group_name])
 
+            # Configure privilege escalation
+            ansible_become = host_data.get('ansible_become', '')
+            ansible_become_password = host_data.get('ansible_become_password', '')
+            connection_options = {}
+            if ansible_become and ansible_become_password:
+                connection_options['netmiko'] = ConnectionOptions(
+                    extras={'secret': ansible_become_password}
+                    if ansible_become == 'yes' and ansible_become_password
+                    else {}
+                )
+
             hosts[inventory_hostname] = Host(
                 name=inventory_hostname,
                 hostname=host_data.get('ansible_host'),
