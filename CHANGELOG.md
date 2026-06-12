@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.2...v0.4.3) (2026-06-12)
+
+
+### Bug Fixes
+
+* fix privilege escalation ([de1964e](https://github.com/NetDocLab/netdoc-collector/commit/de1964e6f3d8e0f487c688fd91eca9021f4659ac))
+* fix upload payload ([4d4d7d7](https://github.com/NetDocLab/netdoc-collector/commit/4d4d7d77f080da2e5ef16b14300f97a251ce0a39))
+* fix upload payload ([db31485](https://github.com/NetDocLab/netdoc-collector/commit/db31485e26ae94b720b17ac5da703f9d6f636f01))
+
 ## [0.4.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.1...v0.4.2) (2026-06-10)
 
 
