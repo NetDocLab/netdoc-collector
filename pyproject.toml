@@ -19,6 +19,7 @@ dependencies = [
     "netmiko==4.6.0",
     "nornir==3.5.0",
     "nornir-netmiko==1.0.1",
+    "ntc_templates==9.1.0",
     "PyYAML==6.0.3",
     "textfsm==2.1.0",
     "psutil==7.2.2"
