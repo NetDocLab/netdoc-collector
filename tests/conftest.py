@@ -2,6 +2,10 @@ import os
 from ipaddress import IPv4Network
 
 import pytest
+from apps.core.models import Tenant
+from django.contrib.auth import get_user_model
+from netdoc_sdk.client import NetDocClient
+from rest_framework.authtoken.models import Token
 
 
 def _get_ios_device():
@@ -46,10 +50,46 @@ def _get_ios_device():
     return {'collector': {}, 'scan': {}, 'inventory': {}}
 
 
+def skip_ios_device_tests():
+    return not _get_ios_device().get('scan')
+
+
 @pytest.fixture()
 def ios_device():
     return _get_ios_device()
 
 
-def skip_ios_device_tests():
-    return not _get_ios_device().get('scan')
+@pytest.fixture
+def admin_client(db, live_server):
+    username = 'conftest-admin'
+    password = '986629a7ca89202a3ef2ae1dd9d5fb37'
+    User = get_user_model()
+
+    # Create user within a tenant
+    tenant, _created = Tenant.objects.get_or_create(name='conftest-tenant')
+    user = User.objects.create_user(
+        username=username, password=password, tenant=tenant, role='admin'
+    )
+
+    # Create token
+    token, _ = Token.objects.get_or_create(user=user)
+
+    return NetDocClient(base_url=live_server.url, token=token.key)
+
+
+@pytest.fixture
+def collector_client(db, live_server):
+    username = 'conftest-collector'
+    password = '0709fc937909d63b851fa5bd4437e33b'
+    User = get_user_model()
+
+    # Create user within a tenant
+    tenant, _created = Tenant.objects.get_or_create(name='conftest-tenant')
+    user = User.objects.create_user(
+        username=username, password=password, tenant=tenant, role='collector'
+    )
+
+    # Create token
+    token, _ = Token.objects.get_or_create(user=user)
+
+    return NetDocClient(base_url=live_server.url, token=token.key)

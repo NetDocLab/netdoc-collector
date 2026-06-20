@@ -51,7 +51,7 @@ class TestStandAloneCollector:
         )
 
     @pytest.mark.skipif(skip_ios_device_tests() is True, reason='Skip device related tests')
-    def test_scan(self, workdir):
+    def test_standalone_collector(self, workdir):
 
         r = self._run(workdir)
         assert r.returncode == 0

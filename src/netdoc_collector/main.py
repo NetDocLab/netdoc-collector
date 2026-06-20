@@ -23,7 +23,7 @@ from pathlib import Path
 
 import psutil
 from netdoc_sdk.client import NetDocClient
-from netdoc_sdk.exceptions import NetDocError, ValidationError
+from netdoc_sdk.exceptions import AuthenticationError, NetDocError, ValidationError
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
@@ -33,7 +33,6 @@ from netdoc_collector.core.tasks import (
     discovery_task,
     mark_job_as_failed,
     send_collector_heartbeat,
-    send_job_heartbeat,
 )
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
@@ -157,6 +156,13 @@ async def main() -> int:
         )
         client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
 
+        # Single heartbeat to validate token
+        try:
+            await client.collector_heartbeat(name=collector_name, version=collector_version)
+        except (AuthenticationError, ValidationError) as exc:
+            logging.error(exc.message)
+            return 11
+
         # Periodically send a collector heartbeat; stop_event is set on failure.
         collector_heartbeat_task = asyncio.create_task(
             send_collector_heartbeat(
@@ -231,7 +237,7 @@ async def main() -> int:
                 logging.info('No job to claim')
                 _cancel_background_tasks(background_tasks)
                 return 0
-        except ValidationError as exc:
+        except (AuthenticationError, ValidationError) as exc:
             logging.error(exc.message)
             _cancel_background_tasks(background_tasks)
             return 7
@@ -251,18 +257,6 @@ async def main() -> int:
                     mark_job_as_failed(client, id=job_id, claim_token=claim_token)
                 ),
             )
-
-        # Periodically send a job heartbeat; stop_event is set on failure.
-        job_heartbeat_task = asyncio.create_task(
-            send_job_heartbeat(
-                client,
-                id=job_id,
-                claim_token=claim_token,
-                stop_event=stop_event,
-            )
-        )
-        background_tasks.add(job_heartbeat_task)
-        job_heartbeat_task.add_done_callback(background_tasks.discard)
     elif scan:
         # Stand-alone mode (scan)
         scan_workers = num_workers * 10
