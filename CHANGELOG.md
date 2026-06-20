@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.3...v0.5.0) (2026-06-20)
+
+
+### Bug Fixes
+
+* decrease coverage ([49cf304](https://github.com/NetDocLab/netdoc-collector/commit/49cf304f1054e8df667b175936dbf5acdaa22f31))
+* decrease coverage level to run the workflow ([4d518ca](https://github.com/NetDocLab/netdoc-collector/commit/4d518ca73cbe69a44fe65dc1aafcc63b403451ce))
+* fix ci tests ([a318d67](https://github.com/NetDocLab/netdoc-collector/commit/a318d67f0deafa9ccb34bb5a26531e196359aca1))
+* update cryptography==48.0.1 ([2fbfa1b](https://github.com/NetDocLab/netdoc-collector/commit/2fbfa1b9ad0fd88bead375bb79389e4cdf201eb4))
+* update poetry.lock ([b67e948](https://github.com/NetDocLab/netdoc-collector/commit/b67e948797d12441c91319034f511ea45727b3fd))
+
 ## [0.4.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.2...v0.4.3) (2026-06-12)
 
 
