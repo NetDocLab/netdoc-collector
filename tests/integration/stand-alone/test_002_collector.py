@@ -1,6 +1,8 @@
 import json
+import os
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -11,7 +13,7 @@ from tests.conftest import _get_ios_device, skip_ios_device_tests
 testbed = _get_ios_device()
 
 
-class TestStandAloneScan:
+class TestStandAloneCollector:
     """Execute the collector as a subprocess against the Cisco device."""
 
     @pytest.fixture()
@@ -30,9 +32,7 @@ class TestStandAloneScan:
             },
         }
         (tmp_path / 'config.yaml').write_text(yaml.dump(config))
-        (tmp_path / 'secrets.yaml').write_text(
-            yaml.dump({'credentials': testbed['scan']['credentials']})
-        )
+        (tmp_path / 'inventory.json').write_text(json.dumps(testbed['inventory']))
         return tmp_path
 
     def _run(self, workdir: Path) -> subprocess.CompletedProcess:
@@ -41,11 +41,6 @@ class TestStandAloneScan:
                 sys.executable,
                 '-m',
                 'netdoc_collector',
-                '-s',
-                '-n',
-                str(testbed['scan']['networks'][0]),
-                '-p',
-                str(workdir / 'secrets.yaml'),
                 '-i',
                 str(workdir / 'inventory.json'),
             ],
@@ -61,27 +56,19 @@ class TestStandAloneScan:
         r = self._run(workdir)
         assert r.returncode == 0
 
-        # Verify inventory
-        with open('inventory.json') as fh:
-            inventory = json.load(fh)
+        # Verify output
+        output_dir = Path(workdir) / Path('output')
+        assert os.path.isdir(output_dir)
 
-        ansible_host = testbed['collector']['address']
-        ansible_user = testbed['collector']['username']
-        ansible_password = testbed['collector']['password']
+        # Verify output/20260615-170844
+        today = date.today().strftime('%Y%m%d')
+        matching_dirs = [d for d in output_dir.iterdir() if d.is_dir() and d.name.startswith(today)]
+        assert matching_dirs
 
-        # Host
-        assert '_meta' in inventory
-        assert 'hostvars' in inventory['_meta']
-        assert ansible_host in inventory['_meta']['hostvars']
-        result = inventory['_meta']['hostvars'][ansible_host]
-        assert result.get('ansible_host') == ansible_host
-        assert result.get('ansible_user') == ansible_user
-        assert result.get('ansible_password') == ansible_password
-        assert result.get('ansible_port') == 22
-        assert result.get('netdoc_plugin') == 'netmiko:cisco:ios:ssh'
-        assert result.get('netmiko_device_type') == 'cisco_ios'
+        # Verify output/20260615-170844/192.168.0.1
+        host_output_dir = matching_dirs[0] / Path(testbed['inventory']['all']['hosts'][0])
+        assert os.path.isdir(host_output_dir)
 
-        # Group all
-        assert 'all' in inventory
-        assert 'hosts' in inventory['all']
-        assert len(inventory['all']['hosts']) == 1
+        # Verify logs
+        assert os.path.isfile(host_output_dir / Path('show-version.raw'))
+        assert os.path.isfile(host_output_dir / Path('show-version.json'))

@@ -27,8 +27,23 @@ def _get_ios_device():
                 'networks': [IPv4Network(f'{NETDOC_DEVICE_ADDRESS}/32')],
                 'ports': [22],
             },
+            'inventory': {
+                '_meta': {
+                    'hostvars': {
+                        NETDOC_DEVICE_ADDRESS: {
+                            'ansible_host': NETDOC_DEVICE_ADDRESS,
+                            'ansible_password': NETDOC_DEVICE_PASSWORD,
+                            'ansible_port': 22,
+                            'ansible_user': NETDOC_DEVICE_USERNAME,
+                            'netdoc_plugin': 'netmiko:cisco:ios:ssh',
+                            'netmiko_device_type': 'cisco_ios',
+                        }
+                    }
+                },
+                'all': {'hosts': [NETDOC_DEVICE_ADDRESS]},
+            },
         }
-    return {'collector': {}, 'scan': {}}
+    return {'collector': {}, 'scan': {}, 'inventory': {}}
 
 
 @pytest.fixture()
