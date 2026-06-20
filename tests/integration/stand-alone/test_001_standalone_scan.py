@@ -33,7 +33,6 @@ class TestStandAloneScan:
         (tmp_path / 'secrets.yaml').write_text(
             yaml.dump({'credentials': testbed['scan']['credentials']})
         )
-        (tmp_path / 'output').mkdir()
         return tmp_path
 
     def _run(self, workdir: Path) -> subprocess.CompletedProcess:
@@ -57,7 +56,7 @@ class TestStandAloneScan:
         )
 
     @pytest.mark.skipif(skip_ios_device_tests() is True, reason='Skip device related tests')
-    def test_scan(self, workdir):
+    def test_standalone_scan(self, workdir):
 
         r = self._run(workdir)
         assert r.returncode == 0

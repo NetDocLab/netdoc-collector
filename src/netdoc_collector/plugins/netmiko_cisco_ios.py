@@ -29,6 +29,8 @@ class NetmikoCiscoIosPlugin(BasePlugin):
 
         # Standard commands
         return [
+            'show aaa servers detailed',
+            'show aaa servers',
             'show authentication sessions',
             'show cdp neighbors detail',
             'show device-tracking database',
@@ -36,8 +38,11 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show env fan',
             'show env power all',
             'show env temperature',
+            'show errdisable detect',
+            'show errdisable recovery',
             'show etherchannel summary',
             'show glbp',
+            'show interfaces status err-disabled',
             'show interfaces status',
             'show interfaces switchport',
             'show interfaces trunk',
@@ -53,7 +58,10 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show lldp neighbors detail',
             'show logging last 200',
             'show mac address-table dynamic',
+            'show ntp associations',
+            'show radius server-group all',
             'show running-config',
+            'show spanning-tree summary',
             'show spanning-tree',
             'show standby',
             'show switch stack-ports',
@@ -62,6 +70,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show vlan',
             'show vrf',
             'show vrrp all',
+            'show vtp status',
         ]
 
     def collect(self, task: Task) -> dict[str, dict]:

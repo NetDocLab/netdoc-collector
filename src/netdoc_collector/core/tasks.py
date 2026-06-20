@@ -46,36 +46,6 @@ async def send_collector_heartbeat(
         await asyncio.sleep(interval)
 
 
-async def send_job_heartbeat(
-    collector_client: NetDocClient,
-    id: str,
-    claim_token: str,
-    stop_event: asyncio.Event,
-    interval: int = 30,
-) -> None:
-    """Send periodic job heartbeat to NetDoc server.
-
-    Sends a heartbeat signal at regular intervals to indicate the discovery job
-    is still running. Runs until `stop_event` is set. On any failure, logs the
-    error and signals the stop event so the main loop can exit cleanly.
-
-    Args:
-        collector_client: Client instance for communicating with NetDoc server.
-        id: Unique identifier for the discovery job.
-        claim_token: Authentication token to claim ownership of the job.
-        stop_event: Event used to signal the main loop to stop.
-        interval: Heartbeat interval in seconds. Defaults to 30.
-    """
-    while not stop_event.is_set():
-        try:
-            await collector_client.discoveryjob_heartbeat(id=id, claim_token=claim_token)
-        except Exception as exc:
-            logging.error('Job heartbeat failed: %s', exc)
-            stop_event.set()
-            return
-        await asyncio.sleep(interval)
-
-
 async def mark_job_as_failed(
     collector_client: NetDocClient,
     id: str,
