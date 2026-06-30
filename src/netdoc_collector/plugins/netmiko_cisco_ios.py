@@ -61,6 +61,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ntp associations',
             'show radius server-group all',
             'show running-config',
+            'show spanning-tree root',
             'show spanning-tree summary',
             'show spanning-tree',
             'show standby',

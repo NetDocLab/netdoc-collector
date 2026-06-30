@@ -41,6 +41,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show port-channel summary',
             'show running-config',
             'show spanning-tree',
+            'show spanning-tree root',
             'show vdc',
             'show version',
             'show vlan',
