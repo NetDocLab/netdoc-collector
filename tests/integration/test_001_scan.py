@@ -8,7 +8,7 @@ class TestScan:
     @pytest.mark.skipif(skip_ios_device_tests() is True, reason='Skip device related tests')
     def test_scan_ssh(self, ios_device):
         scanner = NetworkScanner(timeout=5, concurrency=1, **ios_device['scan'])
-        hosts = [host for host in scanner.scan()]
+        hosts = list(scanner.scan())
         assert len(hosts) == 1
         host = hosts[0]
         assert host.port == 22
