@@ -4,7 +4,7 @@ from ipaddress import IPv4Network
 import pytest
 from apps.core.models import Tenant
 from django.contrib.auth import get_user_model
-from netdoc_sdk.client import NetDocClient
+from netdoc_sdk.client import NetDocSyncClient as NetDocClient
 from rest_framework.authtoken.models import Token
 
 

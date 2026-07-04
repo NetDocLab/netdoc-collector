@@ -1,10 +1,8 @@
-import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
-    LogListHandler,
     cleanup_old_snapshots,
     is_valid_report_dir,
     load_config,
@@ -45,19 +43,3 @@ def test_is_valid_report_dir():
     assert is_valid_report_dir('20250101-000000')
     assert not is_valid_report_dir('not-a-timestamp')
     assert not is_valid_report_dir('2025-01-01')
-
-
-def test_log_list_handler_omits_traceback_records():
-    handler = LogListHandler()
-    record = logging.LogRecord('test', logging.INFO, '', 0, 'hello world', (), None)
-    handler.emit(record)
-
-    traceback_record = logging.LogRecord(
-        'test', logging.ERROR, '', 0, 'Traceback (most recent call last):', (), None
-    )
-    handler.emit(traceback_record)
-
-    assert len(handler.records) == 1
-    assert handler.records[0]['severity'] == 'INFO'
-    assert handler.records[0]['message'] == 'hello world'
-    assert 'timestamp' in handler.records[0]

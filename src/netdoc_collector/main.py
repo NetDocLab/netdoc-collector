@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """NetDoc collector command-line entrypoint and task orchestration.
 
-This module defines the asynchronous collector application that can run
+This module defines the synchronous collector application that can run
 in either stand-alone or managed mode. It parses CLI arguments, loads
 configuration, initializes Nornir, executes discovery tasks, and handles
 upload of raw discovery payloads to the NetDoc backend.
 """
 
 import argparse
-import asyncio
 import getpass
 import ipaddress
 import json
@@ -20,10 +19,11 @@ import sys
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
+from threading import Event, Thread
 
 import psutil
-from netdoc_sdk.client import NetDocClient
-from netdoc_sdk.exceptions import AuthenticationError, NetDocError, ValidationError
+from netdoc_sdk.client import NetDocSyncClient
+from netdoc_sdk.exceptions import AuthenticationError, ValidationError
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
@@ -36,7 +36,6 @@ from netdoc_collector.core.tasks import (
 )
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
-    LogListHandler,
     cleanup_old_snapshots,
     load_config,
 )
@@ -50,24 +49,23 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ],
 )
-log_list_handler = LogListHandler()
-log_list_handler.setLevel(logging.INFO)
-logging.getLogger().addHandler(log_list_handler)
 logger = logging.getLogger(__name__)
 
 
-def _cancel_background_tasks(background_tasks: set[asyncio.Task]) -> None:
-    """Cancel all background tasks and discard them from the set.
+def _stop_background_threads(threads: list[Thread], stop_event: Event) -> None:
+    """Signal all background threads to stop and wait for them to finish.
 
     Args:
-        background_tasks: set of running background tasks to cancel.
+        threads: list of running background threads.
+        stop_event: shared stop event to signal threads.
     """
-    for task in list(background_tasks):
-        task.cancel()
-    background_tasks.clear()
+    stop_event.set()
+    for thread in threads:
+        thread.join(timeout=5)
+    threads.clear()
 
 
-async def main() -> int:
+def main() -> int:
     """Parse CLI arguments and execute the NetDoc collector workflow.
 
     Returns:
@@ -135,54 +133,58 @@ async def main() -> int:
     # backend_verify = args.verify or backend_data.get("verify", True)  # TODO
 
     # Managed mode configuration
-    background_tasks: set[asyncio.Task] = set()
+    background_threads: list[Thread] = []
     claim_token = None
     client = None
     collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
     collector_version = version('netdoc-collector')
     idempotency_key = None
     job_id = None
-
     # Shared stop event: any background task can set this to request a clean shutdown.
-    stop_event = asyncio.Event()
+    stop_event = Event()
 
     # Evaluating mode
     if backend_url and backend_token:
-        # Running in managed mode
-        logging.info(
+        logger.info(
             'Running in managed mode (backend_url=%s, collector_name=%s)',
             backend_url,
             collector_name,
         )
-        client = NetDocClient(base_url=backend_url, token=backend_token, timeout=backend_timeout)
+        client = NetDocSyncClient(
+            base_url=backend_url, token=backend_token, timeout=backend_timeout
+        )
 
         # Single heartbeat to validate token
         try:
-            await client.collector_heartbeat(name=collector_name, version=collector_version)
+            client.collectors_heartbeat(name=collector_name, version=collector_version)
         except (AuthenticationError, ValidationError) as exc:
-            logging.error(exc.message)
+            logger.error(exc.message)
             return 11
 
         # Periodically send a collector heartbeat; stop_event is set on failure.
-        collector_heartbeat_task = asyncio.create_task(
-            send_collector_heartbeat(
-                client,
-                name=collector_name,
-                version=collector_version,
-                stop_event=stop_event,
-            )
+        heartbeat_thread = Thread(
+            target=send_collector_heartbeat,
+            kwargs={
+                'collector_client': client,
+                'name': collector_name,
+                'version': collector_version,
+                'stop_event': stop_event,
+            },
+            daemon=True,
+            name='heartbeat',
         )
-        background_tasks.add(collector_heartbeat_task)
-        collector_heartbeat_task.add_done_callback(background_tasks.discard)
+        heartbeat_thread.start()
+        background_threads.append(heartbeat_thread)
+
     elif scan:
         # Running in stand-alone mode (scan)
-        logging.info('Running in stand-alone mode (scan)')
+        logger.info('Running in stand-alone mode (scan)')
 
         # Load credentials from secrets.yaml
         secrets = load_config(args.password)
         credentials = secrets.get('credentials', {})
         if not credentials:
-            logging.error('No credential found')
+            logger.error('No credential found')
             return 6
 
         # Validate networks to scan
@@ -193,29 +195,23 @@ async def main() -> int:
                 for addr in addrs:
                     if addr.family != socket.AF_INET:
                         continue
-
                     network = ipaddress.IPv4Network(f'{addr.address}/{addr.netmask}', strict=False)
-
-                    if network.is_loopback:
-                        # Exclude loopback
+                    if network.is_loopback or not network.is_private:
+                        # Exclude loopback and public networks
                         continue
-
-                    if not network.is_private:
-                        # Include private networks only
-                        continue
-
                     networks.append(network)
         else:
             for input_network in input_networks:
                 try:
                     network = ipaddress.IPv4Network(input_network, strict=False)
                 except ipaddress.NetmaskValueError:
-                    logging.error('Network %s is invalid', input_network)
+                    logger.error('Network %s is invalid', input_network)
                     return 5
                 networks.append(network)
+
     elif inventory_file:
         # Running in stand-alone mode (discovery)
-        logging.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
+        logger.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         with open(inventory_file) as fh:
             try:
                 inventory = json.load(fh)
@@ -228,35 +224,34 @@ async def main() -> int:
 
     if client:
         # Managed mode
+        # Register signal handlers for graceful shutdown
+        def _handle_signal(signum, frame) -> None:
+            logger.warning('Signal %d received — marking job as failed', signum)
+            if job_id and claim_token:
+                mark_job_as_failed(client, id=job_id, claim_token=claim_token)
+            _stop_background_threads(background_threads, stop_event)
+            sys.exit(1)
+
+        signal.signal(signal.SIGINT, _handle_signal)
+        signal.signal(signal.SIGTERM, _handle_signal)
 
         # Claim job
         try:
-            job = await client.discoveryjob_claim()
+            job = client.discovery_jobs_claim()
             if not job:
-                # Nothing to do
-                logging.info('No job to claim')
-                _cancel_background_tasks(background_tasks)
+                logger.info('No job to claim')
+                _stop_background_threads(background_threads, stop_event)
                 return 0
         except (AuthenticationError, ValidationError) as exc:
-            logging.error(exc.message)
-            _cancel_background_tasks(background_tasks)
+            logger.error(exc.message)
+            _stop_background_threads(background_threads, stop_event)
             return 7
 
         job_id = job.id
         idempotency_key = job.idempotency_key
         claim_token = job.claim_token
         inventory = job.inventory
-        logging.info('Claimed job %s on %s devices', job_id, len(inventory['all']['hosts']))
 
-        # Register cleanup handler for interrupt signals
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(
-                sig,
-                lambda: asyncio.ensure_future(
-                    mark_job_as_failed(client, id=job_id, claim_token=claim_token)
-                ),
-            )
     elif scan:
         # Stand-alone mode (scan)
         scan_workers = num_workers * 10
@@ -267,13 +262,13 @@ async def main() -> int:
             credentials=credentials,
             networks=networks,
         )
-        logging.info('Starting scan with %d workers', scan_workers)
-        hosts = [host async for host in scanner.scan()]
+        logger.info('Starting scan with %d workers', scan_workers)
+        hosts = list(scanner.scan())
         scanner.save_inventory(hosts, inventory_file)
         return 0
     else:
         # Stand-alone mode (discovery)
-        logging.info('Reading inventory_file=%s', inventory_file)
+        logger.info('Reading inventory_file=%s', inventory_file)
         with open(inventory_file) as fh:
             try:
                 inventory = json.load(fh)
@@ -283,23 +278,18 @@ async def main() -> int:
 
     # Abort early if a heartbeat already failed during setup.
     if stop_event.is_set():
-        logging.error('A background task failed during setup; aborting.')
-        _cancel_background_tasks(background_tasks)
+        logger.error('A background thread failed during setup; aborting.')
+        _stop_background_threads(background_threads, stop_event)
         return 9
 
     # Initialising Nornir for managed and stand-alone modes
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
     InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
     nr = InitNornir(
-        runner={
-            'plugin': 'threaded',
-            'options': {'num_workers': num_workers},
-        },
+        runner={'plugin': 'threaded', 'options': {'num_workers': num_workers}},
         inventory={
             'plugin': 'NetDocAnsibleInventory',
-            'options': {
-                'inventory': inventory,
-            },
+            'options': {'inventory': inventory},
         },
         logging={'enabled': False},
     )
@@ -310,6 +300,10 @@ async def main() -> int:
         task=discovery_task,
         report_path=report_path,
         cmd_timeout=cmd_timeout,
+        client=client,
+        job_id=job_id,
+        idempotency_key=idempotency_key,
+        claim_token=claim_token,
     )
     total_hosts = len(results.values())
     failed_hosts = sum(1 for r in results.values() if r.failed)
@@ -321,68 +315,29 @@ async def main() -> int:
 
     # Closing task (managed mode)
     if client:
-        job_status = 'completed'
-        # Uploading raw output
-        for host_name, result in results.items():
-            if result.failed:
-                # Skip failed hosts
-                continue
-
-            host = nr.inventory.hosts[host_name]
-            netdoc_id = host.data.get('netdoc_id')
-            raw_payload = result[0].result
-            try:
-                await client.discoveryjob_push_discovered_device(
-                    id=job_id,
-                    data={
-                        'canonical_device': netdoc_id,
-                        'idempotency_key': idempotency_key,
-                        'raw_payload': raw_payload,
-                    },
-                    claim_token=claim_token,
-                )
-                logger.info(
-                    "Upload completed for host '%s'",
-                    host_name,
-                )
-            except NetDocError as e:
-                job_status = 'failed'
-                logger.error(
-                    "Upload failed for host '%s': status=%s detail=%s",
-                    host_name,
-                    e.status_code,
-                    e.detail,
-                )
-
         # Close the job
-        if completed_hosts == 0:
-            job_status = 'failed'
+        job_status = 'failed' if completed_hosts == 0 else 'completed'
         try:
-            await client.discoveryjob_complete(
+            client.discovery_jobs_complete(
                 id=job_id,
                 claim_token=claim_token,
-                data={'status': job_status, 'log_messages': log_list_handler.records},
+                data={'status': job_status},
             )
-            logging.info('Job %s is %s', job_id, job_status)
+            logger.info('Job %s is %s', job_id, job_status)
         except ValidationError as exc:
             logger.error('Failed to complete job: %s', exc)
-            _cancel_background_tasks(background_tasks)
+            _stop_background_threads(background_threads, stop_event)
             return 10
 
     # Cancel all background tasks before exiting cleanly.
-    _cancel_background_tasks(background_tasks)
-
+    _stop_background_threads(background_threads, stop_event)
     return 2 if failed_hosts else 0
 
 
 def entrypoint() -> int:
-    """Execute the collector entrypoint from a console script.
-
-    Returns:
-        int: exit code from :func:`main`.
-    """
-    return asyncio.run(main())
+    """Execute the collector entrypoint from a console script."""
+    return main()
 
 
 if __name__ == '__main__':
-    sys.exit(asyncio.run(main()))
+    sys.exit(main())

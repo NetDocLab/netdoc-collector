@@ -51,4 +51,5 @@ class NetmikoAlliedTelesisAwplusPlugin(BasePlugin):
         except Exception:
             logging.error(f'Stopping collection on {self.host_name} due to error')
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

@@ -42,6 +42,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show errdisable recovery',
             'show etherchannel summary',
             'show glbp',
+            # TODO: interface status up/down should include err-disabled. This is on status / status err-disabled
             'show interfaces status err-disabled',
             'show interfaces status',
             'show interfaces switchport',
@@ -100,4 +101,5 @@ class NetmikoCiscoIosPlugin(BasePlugin):
         except Exception:
             logging.error(f'Stopping collection on {self.host_name} due to error')
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}
