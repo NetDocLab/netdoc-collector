@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.5.0...v0.6.0) (2026-07-05)
+
+
+### Bug Fixes
+
+* improve ci/cd ([2706e42](https://github.com/NetDocLab/netdoc-collector/commit/2706e42d8674dfc59c9fc8df9b172a7802ee9d0f))
+* linting and docs ([0126784](https://github.com/NetDocLab/netdoc-collector/commit/012678447ab50ac7946852fbc8b2df2ce4edc6ab))
+* update SDK ([50a9ffe](https://github.com/NetDocLab/netdoc-collector/commit/50a9ffe8905635e0108ece6d28af25948e4bc674))
+* upload logs (main and tasks) ([22af749](https://github.com/NetDocLab/netdoc-collector/commit/22af7490df227aed158c45ec578fbe779897ab07))
+* upload logs per each task ([6816be5](https://github.com/NetDocLab/netdoc-collector/commit/6816be53fb0f1561ce0d8fefe192ee02e2ac6e90))
+
 ## [0.5.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.4.3...v0.5.0) (2026-06-20)
 
 
