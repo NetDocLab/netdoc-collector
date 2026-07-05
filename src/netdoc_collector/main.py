@@ -31,11 +31,12 @@ from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.scanner import NetworkScanner
 from netdoc_collector.core.tasks import (
     discovery_task,
-    mark_job_as_failed,
+    mark_job_as_completed,
     send_collector_heartbeat,
 )
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
+    MainLogCollector,
     cleanup_old_snapshots,
     load_config,
 )
@@ -145,6 +146,9 @@ def main() -> int:
 
     # Evaluating mode
     if backend_url and backend_token:
+        job_log_collector = MainLogCollector()
+        logging.getLogger().addHandler(job_log_collector)
+
         logger.info(
             'Running in managed mode (backend_url=%s, collector_name=%s)',
             backend_url,
@@ -226,9 +230,24 @@ def main() -> int:
         # Managed mode
         # Register signal handlers for graceful shutdown
         def _handle_signal(signum, frame) -> None:
-            logger.warning('Signal %d received — marking job as failed', signum)
+            logger.warning('Signal %d received', signum)
             if job_id and claim_token:
-                mark_job_as_failed(client, id=job_id, claim_token=claim_token)
+                job_logs = job_log_collector.drain()
+                final_status = 'canceled' if cancel_event.is_set() else 'failed'
+                try:
+                    mark_job_as_completed(
+                        client,
+                        id=job_id,
+                        claim_token=claim_token,
+                        status=final_status,
+                        logs=job_logs,
+                    )
+                except ValidationError as exc:
+                    logger.error(
+                        'Failed to close job %s as %s: %s', job_id, final_status, exc.message
+                    )
+                except Exception:
+                    logging.exception('Unexpected error closing job %s on signal', job_id)
             _stop_background_threads(background_threads, stop_event)
             sys.exit(1)
 
@@ -296,6 +315,7 @@ def main() -> int:
 
     # Running discovery tasks
     logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
+    cancel_event = Event()
     results = nr.run(
         task=discovery_task,
         report_path=report_path,
@@ -304,6 +324,7 @@ def main() -> int:
         job_id=job_id,
         idempotency_key=idempotency_key,
         claim_token=claim_token,
+        cancel_event=cancel_event,
     )
     total_hosts = len(results.values())
     failed_hosts = sum(1 for r in results.values() if r.failed)
@@ -316,16 +337,22 @@ def main() -> int:
     # Closing task (managed mode)
     if client:
         # Close the job
-        job_status = 'failed' if completed_hosts == 0 else 'completed'
+        if cancel_event.is_set():
+            final_status = 'cancelled'
+        elif completed_hosts == 0:
+            final_status = 'failed'
+        else:
+            final_status = 'completed'
+
+        job_logs = job_log_collector.drain()
         try:
-            client.discovery_jobs_complete(
-                id=job_id,
-                claim_token=claim_token,
-                data={'status': job_status},
+            mark_job_as_completed(
+                client, id=job_id, claim_token=claim_token, status=final_status, logs=job_logs
             )
-            logger.info('Job %s is %s', job_id, job_status)
+            logger.info('Job %s is %s', job_id, final_status)
         except ValidationError as exc:
-            logger.error('Failed to complete job: %s', exc)
+            logger.error('Failed to complete job: %s', exc.message)
+            logging.getLogger().removeHandler(job_log_collector)
             _stop_background_threads(background_threads, stop_event)
             return 10
 

@@ -101,6 +101,10 @@ class TestManagedCollector:
             logger_name='netdoc_collector.task', correlation_id=str(job.id)
         )
         assert logs.count > 10
+        logs = admin_client.logs_list(
+            logger_name='netdoc_collector.main', correlation_id=str(job.id)
+        )
+        assert logs.count > 1
 
         # Check raw outputs
         raw_logs = admin_client.discovery_jobs_logs(id=job.id)

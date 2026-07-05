@@ -41,15 +41,43 @@ def send_collector_heartbeat(
         stop_event.wait(interval)
 
 
-def mark_job_as_failed(collector_client: NetDocSyncClient, id: str, claim_token: str) -> None:
-    """Mark the current discovery job as failed."""
-    logging.error('Collector interrupted; marking discovery job as failed.')
-    try:
-        collector_client.discovery_jobs_complete(
-            id=id, claim_token=claim_token, data={'status': 'failed'}
-        )
-    except Exception:
-        logging.exception('Failed to mark job as failed')
+def mark_job_as_completed(
+    collector_client: NetDocSyncClient,
+    id: str,
+    claim_token: str,
+    status: str,
+    logs: list[logging.LogRecord] | None = None,
+) -> None:
+    """Close the current discovery job with the given final status.
+
+    Used both by the normal end-of-run flow and by the signal handler, so
+    the job-closing request is built in exactly one place regardless of
+    which of the three terminal states applies.
+
+    Args:
+        collector_client: Client instance.
+        id: Discovery job identifier.
+        claim_token: Claim token for the current collector.
+        status: Final job status ('completed', 'failed', or 'canceled').
+        logs: Job-level log records to attach.
+
+    Raises:
+        ValidationError: propagated so callers that need a distinct exit
+            code (e.g. the normal end-of-run flow) can react to it.
+    """
+    if status == 'completed':
+        logging.info('Closing discovery job %s as %s', id, status)
+    else:
+        logging.warning('Closing discovery job %s as %s', id, status)
+
+    collector_client.discovery_jobs_complete(
+        id=id,
+        claim_token=claim_token,
+        data={
+            'status': status,
+            'logs': [format_log_record(r) for r in (logs or [])],
+        },
+    )
 
 
 def discovery_task(
@@ -59,6 +87,7 @@ def discovery_task(
     job_id: str | None,
     claim_token: str | None,
     idempotency_key: str | None,
+    cancel_event: Event,
     cmd_timeout: int | None = None,
 ) -> Result:
     """Execute discovery for a single host and, in managed mode, push its results.
@@ -68,6 +97,11 @@ def discovery_task(
     together with the collected raw/parsed outputs, in a single request,
     right before the task returns.
 
+    Before doing any work, checks ``cancel_event``: if the job has already
+    been marked as canceling by another host's push response, this task is
+    skipped immediately rather than running discovery on a job that is
+    being torn down.
+
     Args:
         task: Nornir task.
         report_path: Directory where raw reports are stored.
@@ -75,6 +109,8 @@ def discovery_task(
         job_id: Discovery job identifier (managed mode only).
         claim_token: Claim token for the current collector (managed mode only).
         idempotency_key: Job idempotency key (managed mode only).
+        cancel_event: shared event, set when the backend reports the job
+            status as 'canceling' in a push response.
         cmd_timeout: Optional command timeout override.
 
     Returns:
@@ -82,6 +118,15 @@ def discovery_task(
     """
     host = task.host
     netdoc_plugin = host.data.get('netdoc_plugin')
+
+    if cancel_event.is_set():
+        logging.warning("Skipping host '%s': job is canceling", host.name)
+        return Result(
+            host=host,
+            failed=True,
+            exception=RuntimeError('Job canceled before this host started'),
+            result=None,
+        )
 
     with collect_task_logs() as task_logs:
         if not netdoc_plugin:
@@ -115,6 +160,7 @@ def discovery_task(
                 host=host,
                 result=result,
                 task_logs=task_logs,
+                cancel_event=cancel_event,
             )
 
     return result
@@ -128,11 +174,16 @@ def _push_discovered_device(
     host,
     result: Result,
     task_logs: list[logging.LogRecord],
+    cancel_event: Event,
 ) -> None:
     """Push raw/parsed outputs and collected logs for a single host.
 
     Failures are logged but never raised: a push failure must not affect
     the Nornir task result already computed for this host.
+
+    If the backend response reports the job status as 'canceling', sets
+    ``cancel_event`` so that other in-flight or not-yet-started tasks skip
+    their work as soon as possible.
 
     Args:
         client: NetDoc SDK client.
@@ -142,9 +193,11 @@ def _push_discovered_device(
         host: Nornir host object.
         result: Result already computed for this host's discovery task.
         task_logs: Log records captured while processing this host.
+        cancel_event: shared event, set when the backend reports the job
+            status as 'canceling' in a push response.
     """
     try:
-        client.discovery_jobs_push_discovered_device(
+        response = client.discovery_jobs_push_discovered_device(
             id=job_id,
             claim_token=claim_token,
             data={
@@ -155,6 +208,11 @@ def _push_discovered_device(
             },
         )
         logging.info("Push completed for host '%s'", host.name)
+
+        job_status = getattr(response, 'status', None) or response.get('status')
+        if job_status == 'cancelling' and not cancel_event.is_set():
+            logging.warning('Backend reported job as cancelling — stopping further hosts')
+            cancel_event.set()
     except NetDocError as e:
         logging.error(
             "Push failed for host '%s': status=%s detail=%s",

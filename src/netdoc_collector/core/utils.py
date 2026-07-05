@@ -13,7 +13,36 @@ from pathlib import Path
 
 import yaml
 
+_task_local = threading.local()
+
 REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
+
+
+class MainLogCollector(logging.Handler):
+    """Collects log records that do not belong to any per-host task.
+
+    Task-level records are already isolated and pushed per-host by
+    ``collect_task_logs``. This handler captures everything else emitted
+    while a job is in progress — heartbeat failures, job claim/setup
+    messages, signal handling — using a shared thread-local flag to skip
+    records emitted by a worker thread while it is inside a task context.
+    """
+
+    def __init__(self, level: int = logging.INFO):
+        super().__init__(level=level)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if getattr(_task_local, 'active', False):
+            # Already captured and pushed per-host by collect_task_logs.
+            return
+        self.records.append(record)
+
+    def drain(self) -> list[logging.LogRecord]:
+        """Return and clear all records collected so far."""
+        records = self.records
+        self.records = []
+        return records
 
 
 class ThreadLogCollector(logging.Handler):
@@ -37,13 +66,20 @@ class ThreadLogCollector(logging.Handler):
 
 @contextmanager
 def collect_task_logs(level: int = logging.INFO):
-    """Temporarily capture log records emitted by the calling thread."""
+    """Temporarily capture log records emitted by the calling thread.
+
+    Marks the current thread as "inside a task" for the duration of the
+    context, so a concurrently active JobLogCollector skips these records
+    and does not push them a second time at job completion.
+    """
     handler = ThreadLogCollector(level=level)
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
+    _task_local.active = True
     try:
         yield handler.records
     finally:
+        _task_local.active = False
         root_logger.removeHandler(handler)
 
 
