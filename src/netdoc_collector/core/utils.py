@@ -134,10 +134,9 @@ def load_config(path: str) -> dict:
     try:
         with open(path) as f:
             logging.info('Loading configuration from %s', path)
-            return yaml.safe_load(f)
+            return yaml.safe_load(f) or {}
     except FileNotFoundError:
         logging.warning('Cannot load configuration from %s', path)
-        pass
     return {}
 
 

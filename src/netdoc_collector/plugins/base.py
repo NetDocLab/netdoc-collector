@@ -76,6 +76,7 @@ class BasePlugin(ABC):
     def slugify(text: str) -> str:
         """Normalize text into a slug suitable for filenames."""
         text = text.lower().strip()
+        text = text.strip()
         text = re.sub(r'[^\w\s-]', '', text)
         text = re.sub(r'[\s_-]+', '-', text)
         text = re.sub(r'^-+|-+$', '', text)
