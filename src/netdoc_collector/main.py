@@ -105,7 +105,7 @@ def main() -> int:
     cfg = load_config(args.config)
     if args.debug:
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s  %(levelname)-8s  %(name)s  %(message)s',
             datefmt='%Y-%m-%dT%H:%M:%S',
@@ -135,12 +135,12 @@ def main() -> int:
 
     # Managed mode configuration
     background_threads: list[Thread] = []
-    claim_token = None
-    client = None
+    claim_token: str | None = None
+    client: NetDocSyncClient | None = None
     collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
     collector_version = version('netdoc-collector')
-    idempotency_key = None
-    job_id = None
+    idempotency_key: str | None = None
+    job_id: str | None = None
     # Shared stop event: any background task can set this to request a clean shutdown.
     stop_event = Event()
 
@@ -188,7 +188,7 @@ def main() -> int:
         secrets = load_config(args.password)
         credentials = secrets.get('credentials', {})
         if not credentials:
-            logger.error('No credential found')
+            logger.error('No credentials found in %s', args.password)
             return 6
 
         # Validate networks to scan
@@ -335,10 +335,10 @@ def main() -> int:
     cleanup_old_snapshots(output_dir, retention)
 
     # Closing task (managed mode)
-    if client:
+    if client and job_id and claim_token:
         # Close the job
         if cancel_event.is_set():
-            final_status = 'cancelled'
+            final_status = 'canceled'
         elif completed_hosts == 0:
             final_status = 'failed'
         else:
@@ -351,7 +351,7 @@ def main() -> int:
             )
             logger.info('Job %s is %s', job_id, final_status)
         except ValidationError as exc:
-            logger.error('Failed to complete job: %s', exc.message)
+            logger.error('Failed to complete job: %s', exc)
             logging.getLogger().removeHandler(job_log_collector)
             _stop_background_threads(background_threads, stop_event)
             return 10

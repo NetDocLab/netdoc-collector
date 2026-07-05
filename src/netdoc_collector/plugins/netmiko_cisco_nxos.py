@@ -1,6 +1,4 @@
-"""
-Plugin for Cisco NX-OS devices.
-"""
+"""Netmiko plugin for Cisco NX-OS devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoCiscoNxosPlugin(BasePlugin):
-    """Vendor plugin class for NetmikoCiscoNxosPlugin."""
+    """Netmiko plugin for Cisco NX-OS devices."""
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -74,7 +72,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                         parsed_payload[cmd] = parsed_text
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
         # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

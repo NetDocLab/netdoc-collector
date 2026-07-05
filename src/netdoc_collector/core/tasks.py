@@ -151,7 +151,12 @@ def discovery_task(
         # Push before the task returns. Concurrency is bounded by
         # num_workers (one push per host, in flight at most once per
         # worker thread), never by the number of commands executed.
-        if client is not None:
+        if (
+            client is not None
+            and job_id is not None
+            and claim_token is not None
+            and idempotency_key is not None
+        ):
             _push_discovered_device(
                 client=client,
                 job_id=job_id,

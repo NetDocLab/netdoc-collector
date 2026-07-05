@@ -1,6 +1,4 @@
-"""
-Plugin for Huawei VRP devices.
-"""
+"""Netmiko plugin for Huawei VRP devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoHuaweiVrpPlugin(BasePlugin):
-    """Vendor plugin class for NetmikoHuaweiVrpPlugin."""
+    """Netmiko plugin for Huawei VRP devices."""
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -66,7 +64,7 @@ class NetmikoHuaweiVrpPlugin(BasePlugin):
                         parsed_payload[cmd] = parsed_text
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
         # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

@@ -54,7 +54,7 @@ class BasePlugin(ABC):
         """Parse raw Netmiko command output to structured data.
 
         Args:
-            raw_output (str): raw device output from Netmiko.
+            raw_text (str): raw device output from Netmiko.
             platform (str): Netmiko platform name used for parsing.
             cmd (str): command string to identify the parser template.
 
@@ -69,7 +69,7 @@ class BasePlugin(ABC):
         except TextFSMError:
             pass
         if 'vrf' in cmd:
-            logging.warning(f"Cannot parse command '{cmd}'")
+            logger.warning('Cannot parse command %s', cmd)
         return None
 
     @staticmethod
@@ -97,7 +97,7 @@ class BasePlugin(ABC):
         Returns:
             tuple[str, None | list]: raw output and parsed structured output.
         """
-        logger.info(f"Running netmiko command '{cmd}' on {self.host_name}")
+        logger.info('Running netmiko command %s on %s', cmd, self.host_name)
 
         try:
             # Get or open Netmiko connection
@@ -105,11 +105,11 @@ class BasePlugin(ABC):
 
             # Privilege escalation only if required
             if net_connect.secret and not net_connect.check_enable_mode():
-                logger.info(f'Entering enable mode on {self.host_name}')
+                logger.info('Entering enable mode on %s', self.host_name)
                 net_connect.enable()
 
         except Exception as e:
-            logger.error(f'Failed to enter enable mode on {self.host_name}: {e}')
+            logger.error('Failed to enter enable mode on %s: %s', self.host_name, e)
             raise
 
         try:
@@ -124,11 +124,11 @@ class BasePlugin(ABC):
         except NornirSubTaskError as e:
             inner = e.result.exception
             if isinstance(inner, NetmikoAuthenticationException):
-                logger.error(f'Authentication failed on {self.host_name}')
+                logger.error('Authentication failed on %s', self.host_name)
             elif isinstance(inner, NetmikoTimeoutException):
-                logger.error(f"Timeout on {self.host_name} running '{cmd}'")
+                logger.error('Timeout on %s running %s', self.host_name, cmd)
             else:
-                logger.error(f"Error running command '{cmd}' on {self.host_name}: {inner}")
+                logger.error('Error running command %s on %s: %s', cmd, self.host_name, inner)
             raise
 
         # Dump output files
@@ -144,7 +144,7 @@ class BasePlugin(ABC):
 
         Args:
             content (str | dict | list): raw or parsed command output.
-            log (str): command name or log label used to build the filename.
+            label (str): command name or log label used to build the filename.
         """
         if not self.report_path:
             # Write output if report path is set only
