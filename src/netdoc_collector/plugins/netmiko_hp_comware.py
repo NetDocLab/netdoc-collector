@@ -1,6 +1,4 @@
-"""
-Plugin for HP Comware devices.
-"""
+"""Netmiko plugin for HP Comware devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoHpComwarePlugin(BasePlugin):
-    """Vendor plugin class for NetmikoHpComwarePlugin."""
+    """Netmiko plugin for HP Comware devices."""
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -62,6 +60,7 @@ class NetmikoHpComwarePlugin(BasePlugin):
                     parsed_payload[cmd] = parsed_output
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

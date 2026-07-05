@@ -1,6 +1,4 @@
-"""
-Plugin for Cisco IOS / IOS-XE devices.
-"""
+"""Netmiko plugin for Cisco IOS devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
-    """Vendor plugin class for NetmikoCiscoIosPlugin."""
+    """Netmiko plugin for Cisco IOS devices."""
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -42,6 +40,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show errdisable recovery',
             'show etherchannel summary',
             'show glbp',
+            # TODO: interface status up/down should include err-disabled. This is on status / status err-disabled
             'show interfaces status err-disabled',
             'show interfaces status',
             'show interfaces switchport',
@@ -61,6 +60,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ntp associations',
             'show radius server-group all',
             'show running-config',
+            'show spanning-tree root',
             'show spanning-tree summary',
             'show spanning-tree',
             'show standby',
@@ -97,6 +97,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                         parsed_payload[cmd] = parsed_text
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

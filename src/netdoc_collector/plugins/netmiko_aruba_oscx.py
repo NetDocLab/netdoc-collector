@@ -1,6 +1,4 @@
-"""
-Plugin for Aruba OSCX devices.
-"""
+"""Netmiko plugin for Aruba Oscx devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoArubaOscxPlugin(BasePlugin):
-    """Vendor plugin class for NetmikoArubaOscxPlugin."""
+    """Netmiko plugin for Aruba AOSCX devices."""
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -66,6 +64,7 @@ class NetmikoArubaOscxPlugin(BasePlugin):
                         parsed_payload[cmd] = parsed_text
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}

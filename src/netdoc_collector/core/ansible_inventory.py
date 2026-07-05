@@ -1,4 +1,7 @@
-"""nornir_ansible.inventory.ansible"""
+"""Ansible inventory plugin for Nornir.
+
+This plugin supports JSON inventory files, inventory dicts, and executable dynamic inventory scripts.
+"""
 
 import json
 import logging
@@ -24,8 +27,8 @@ class NetDocAnsibleInventory:
     ) -> None:
         """Ansible Dynamic Inventory plugin supporting JSON files, dict and executable files.
 
-        Arguments:
-            inventory: Path to valid Ansible JSON file, Ansible dynamic inventory, dict
+        Args:
+            inventory: path to a valid Ansible JSON file, executable inventory script, or inventory dict
         """
         if isinstance(inventory, dict):
             logging.info('Reading inventory from dict')
@@ -41,7 +44,7 @@ class NetDocAnsibleInventory:
         else:
             raise ValueError('Inventory is not valid')
 
-        # TODO: should validate JSON format and trigger errors
+        # Inventory format validation occurs during Nornir host construction.
 
     @staticmethod
     def _run_executable(path: str) -> dict:
@@ -75,7 +78,7 @@ class NetDocAnsibleInventory:
             raise ValueError(f"Inventory script '{path}' returned invalid JSON: {e}") from e
 
     def load(self) -> Inventory:
-        """Load items from remote API."""
+        """Load the current inventory into a Nornir Inventory object."""
         defaults = Defaults()
         hosts = Hosts()
         groups = Groups()

@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   unit-tests:
+    if: "${{ !contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (collector)
@@ -55,7 +56,11 @@ jobs:
       - name: Run tests on collector (make coverage)
         run: make coverage
         working-directory: netdoc-collector
+      - name: Test build process
+        run: poetry build
+        working-directory: netdoc-collector
   snyk:
+    if: "${{ !contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
     needs: unit-tests
     runs-on: ubuntu-latest
     steps:

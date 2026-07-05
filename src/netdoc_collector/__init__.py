@@ -1,0 +1,1 @@
+"""NetDoc collector package."""

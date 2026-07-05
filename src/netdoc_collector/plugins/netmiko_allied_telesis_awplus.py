@@ -1,6 +1,4 @@
-"""
-Plugin for Allied Telesis AW+ devices.
-"""
+"""Netmiko plugin for Allied Telesis AW+ devices."""
 
 import logging
 
@@ -10,7 +8,7 @@ from .base import BasePlugin
 
 
 class NetmikoAlliedTelesisAwplusPlugin(BasePlugin):
-    """Vendor plugin class for NetmikoAlliedTelesisAwplusPlugin."""
+    """Netmiko plugin for Allied Telesis AW+ devices."""
 
     @staticmethod
     def commands() -> list[str]:
@@ -49,6 +47,7 @@ class NetmikoAlliedTelesisAwplusPlugin(BasePlugin):
                     parsed_payload[cmd] = parsed_output
 
         except Exception:
-            logging.error(f'Stopping collection on {self.host_name} due to error')
+            logging.error('Stopping collection on %s due to error', self.host_name)
 
+        # Return raw_payload
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}
