@@ -16,7 +16,6 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             # VRF aware commands
             return [
                 f'show ip arp vrf {vrf}',
-                f'show ip interface vrf {vrf}',
             ]
 
         # Standard commands
@@ -31,6 +30,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show inventory',
             'show ip bgp neighbors',
             'show ip eigrp neighbors',
+            'show ip interface vrf all',
             'show ip ospf neighbor',
             'show ip route vrf all',
             'show lldp neighbors detail',

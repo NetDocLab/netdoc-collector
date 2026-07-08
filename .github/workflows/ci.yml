@@ -1,6 +1,15 @@
 name: Tests (CI)
 env:
   PYTHON_VERSION: 3.12
+  DB_NAME: netdoc_db
+  DB_USERNAME: netdoc_user
+  DB_PASSWORD: netdoc_pass
+  DB_HOST: localhost
+  DJANGO_ALLOWED_HOSTS: '*'
+  DJANGO_SECRET_KEY: django-insecure-CHANGE-ME-IN-PRODUCTION
+  DJANGO_ENCRYPTION_KEY: django-insecure-CHANGE-ME-IN-PRODUCTION-ERR=
+  CELERY_BROKER_URL: not-used-in-tests
+  SECURE_SSL_REDIRECT: false
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -13,6 +22,22 @@ jobs:
     if: "${{ !contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
     runs-on: ubuntu-latest
     steps:
+      - name: "Updating APT cache"
+        run: "sudo apt-get update"
+      - name: "Installing PostgreSQL, Redis"
+        run: "sudo apt-get install -y postgresql redis"
+      - name: "Starting Redis"
+        run: "sudo systemctl start redis-server"
+      - name: "Starting PostgreSQL"
+        run: "sudo systemctl start postgresql"
+      - name: "Adding PostgreSQL database"
+        run: "sudo su - postgres -c 'psql -c \"create database ${{ env.DB_NAME }}\"'"
+      - name: "Adding PostgreSQL username"
+        run: sudo su - postgres -c "psql -c \"create user ${{ env.DB_USERNAME }} with password '${{ env.DB_PASSWORD }}'\""
+      - name: "Setting PostgreSQL database privileges"
+        run: "sudo su - postgres -c 'psql -c \"grant all privileges on database ${{ env.DB_NAME }} to ${{ env.DB_USERNAME }}\"'"
+      - name: "Setting PostgreSQL administrative privileges"
+        run: "sudo su - postgres -c 'psql -c \"alter user ${{ env.DB_USERNAME }} createdb\"'"
       - name: Checkout (collector)
         uses: actions/checkout@v6
         with:

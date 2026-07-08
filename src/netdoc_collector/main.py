@@ -135,12 +135,14 @@ def main() -> int:
 
     # Managed mode configuration
     background_threads: list[Thread] = []
+    cancel_event = Event()
     claim_token: str | None = None
     client: NetDocSyncClient | None = None
     collector_name = f'{getpass.getuser()}@{socket.getfqdn()}'
     collector_version = version('netdoc-collector')
     idempotency_key: str | None = None
     job_id: str | None = None
+    job_log_collector: MainLogCollector | None = None
     # Shared stop event: any background task can set this to request a clean shutdown.
     stop_event = Event()
 
@@ -163,6 +165,7 @@ def main() -> int:
             client.collectors_heartbeat(name=collector_name, version=collector_version)
         except (AuthenticationError, ValidationError) as exc:
             logger.error(exc.message)
+            logging.getLogger().removeHandler(job_log_collector)
             return 11
 
         # Periodically send a collector heartbeat; stop_event is set on failure.
@@ -208,7 +211,7 @@ def main() -> int:
             for input_network in input_networks:
                 try:
                     network = ipaddress.IPv4Network(input_network, strict=False)
-                except ipaddress.NetmaskValueError:
+                except (ipaddress.NetmaskValueError, ValueError):
                     logger.error('Network %s is invalid', input_network)
                     return 5
                 networks.append(network)
@@ -232,7 +235,7 @@ def main() -> int:
         def _handle_signal(signum, frame) -> None:
             logger.warning('Signal %d received', signum)
             if job_id and claim_token:
-                job_logs = job_log_collector.drain()
+                job_logs = job_log_collector.drain() if job_log_collector else []
                 final_status = 'canceled' if cancel_event.is_set() else 'failed'
                 try:
                     mark_job_as_completed(
@@ -315,7 +318,6 @@ def main() -> int:
 
     # Running discovery tasks
     logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
-    cancel_event = Event()
     results = nr.run(
         task=discovery_task,
         report_path=report_path,
@@ -344,7 +346,7 @@ def main() -> int:
         else:
             final_status = 'completed'
 
-        job_logs = job_log_collector.drain()
+        job_logs = job_log_collector.drain() if job_log_collector else []
         try:
             mark_job_as_completed(
                 client, id=job_id, claim_token=claim_token, status=final_status, logs=job_logs
@@ -352,9 +354,13 @@ def main() -> int:
             logger.info('Job %s is %s', job_id, final_status)
         except ValidationError as exc:
             logger.error('Failed to complete job: %s', exc)
-            logging.getLogger().removeHandler(job_log_collector)
+            if job_log_collector:
+                logging.getLogger().removeHandler(job_log_collector)
             _stop_background_threads(background_threads, stop_event)
             return 10
+
+    if job_log_collector:
+        logging.getLogger().removeHandler(job_log_collector)
 
     # Cancel all background tasks before exiting cleanly.
     _stop_background_threads(background_threads, stop_event)
