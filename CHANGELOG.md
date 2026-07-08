@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.0...v0.6.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* consolidate nxos command ([2a8b22d](https://github.com/NetDocLab/netdoc-collector/commit/2a8b22da1cd2d341c9676be2ded7ebaa3c066397))
+* fix race, improve ipaddress exception ([8192418](https://github.com/NetDocLab/netdoc-collector/commit/8192418eca46e2d2420c18f112c767f21a16680d))
+* improve slugify, add tests ([fe9a43b](https://github.com/NetDocLab/netdoc-collector/commit/fe9a43bbc96b7b7cc154091f084759a9e2281db9))
+* update SDK and NX-OS collector and tests ([158a491](https://github.com/NetDocLab/netdoc-collector/commit/158a4916e6b7e8d30b2aede115d58a1c3140c9a3))
+
 ## [0.6.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.5.0...v0.6.0) (2026-07-05)
 
 
