@@ -54,6 +54,7 @@ class TestCommands:
         """Standard commands must not include per-VRF variants."""
         cmds = NetmikoCiscoNxosPlugin.commands()
         cmds.remove('show vrf')
+        cmds.remove('show ip interface vrf all')
         cmds.remove('show ip route vrf all')
         vrf_cmds = [c for c in cmds if 'vrf' in c]
         assert vrf_cmds == [], f'Unexpected VRF commands in standard list: {vrf_cmds}'
@@ -63,14 +64,13 @@ class TestCommands:
         cmds = NetmikoCiscoNxosPlugin.commands()
         assert 'show ip route vrf all' in cmds
 
-    def test_named_vrf_returns_two_commands(self):
+    def test_named_vrf_returns_one_command(self):
         cmds = NetmikoCiscoNxosPlugin.commands(vrf='MGMT')
-        assert len(cmds) == 2
+        assert len(cmds) == 1
 
     def test_named_vrf_returns_vrf_aware_commands(self):
         cmds = NetmikoCiscoNxosPlugin.commands(vrf='MGMT')
         assert 'show ip arp vrf MGMT' in cmds
-        assert 'show ip interface vrf MGMT' in cmds
 
     def test_named_vrf_does_not_contain_plain_commands(self):
         cmds = NetmikoCiscoNxosPlugin.commands(vrf='MGMT')
@@ -139,7 +139,6 @@ class TestCollectHappyPath:
 
         called_cmds = [c.args[2] for c in mock_cmd.call_args_list]
         assert 'show ip arp vrf default' in called_cmds
-        assert 'show ip interface vrf default' in called_cmds
 
     def test_named_vrf_commands_run_when_show_vrf_parsed(self, plugin, mock_task):
         show_vrf_parsed = [{'name': 'MGMT'}, {'name': 'PROD'}]
@@ -154,9 +153,7 @@ class TestCollectHappyPath:
 
         called_cmds = [c.args[2] for c in mock_cmd.call_args_list]
         assert 'show ip arp vrf MGMT' in called_cmds
-        assert 'show ip interface vrf MGMT' in called_cmds
         assert 'show ip arp vrf PROD' in called_cmds
-        assert 'show ip interface vrf PROD' in called_cmds
 
     def test_named_vrf_commands_not_run_when_show_vrf_not_parsed(self, plugin, mock_task):
         """If show vrf returns no parsed data, only default VRF commands run."""
@@ -165,6 +162,7 @@ class TestCollectHappyPath:
 
         called_cmds = [c.args[2] for c in mock_cmd.call_args_list]
         called_cmds.remove('show vrf')
+        called_cmds.remove('show ip interface vrf all')
         called_cmds.remove('show ip route vrf all')
         named_vrf_cmds = [c for c in called_cmds if 'vrf' in c and 'vrf default' not in c]
         assert named_vrf_cmds == []
@@ -198,7 +196,6 @@ class TestCollectHappyPath:
             result = plugin.collect(mock_task)
 
         assert 'show ip arp vrf MGMT' in result['raw_outputs']
-        assert 'show ip interface vrf MGMT' in result['raw_outputs']
 
 
 # ---------------------------------------------------------------------------

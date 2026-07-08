@@ -10,6 +10,7 @@ from tests.conftest import _get_ios_device, skip_ios_device_tests
 testbed = _get_ios_device()
 
 
+@pytest.mark.django_db(databases=['default', 'logs'])
 class TestManagedCollector:
     """Execute the collector as a subprocess against the Cisco device."""
 
@@ -48,7 +49,6 @@ class TestManagedCollector:
         )
 
     @pytest.mark.skipif(skip_ios_device_tests() is True, reason='Skip device related tests')
-    @pytest.mark.django_db(transaction=True)
     def test_managed_collector(self, workdir, live_server, admin_client, collector_client):
         ansible_host = testbed['collector']['address']
         ansible_user = testbed['collector']['username']
