@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.1...v0.6.2) (2026-07-10)
+
+
+### Bug Fixes
+
+* add additional commands ([3b59277](https://github.com/NetDocLab/netdoc-collector/commit/3b5927769ae5d312305323a5d771559a3f9a5567))
+* force paramiko 4 for legacy devices ([f751903](https://github.com/NetDocLab/netdoc-collector/commit/f7519038b4a926c39f89ae26b91cec1921546656))
+
 ## [0.6.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.0...v0.6.1) (2026-07-08)
 
 
