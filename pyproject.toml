@@ -77,6 +77,7 @@ djangorestframework = ">=3.14,<4.0"
 netdoc = {path = "../netdoc", develop = true}
 netdoc-sdk = {path = "../netdoc-sdk", develop = true}
 psycopg = {extras = ["binary", "pool"], version = "^3.3.4"}
+pydantic = {extras = ["email"], version = "^2.13.4"}
 pytest-django = "^4.12.0"
 
 # Code quality
