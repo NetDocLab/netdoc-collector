@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.2...v0.6.3) (2026-07-10)
+
+
+### Bug Fixes
+
+* support insecure certificates ([9bb8afb](https://github.com/NetDocLab/netdoc-collector/commit/9bb8afb0f735378417c0f9c9b1e6b37d231c5dd5))
+* support insecure certificates ([b8be945](https://github.com/NetDocLab/netdoc-collector/commit/b8be94583cc1b57d9015c6fa68a50dd13f6b3fe9))
+
 ## [0.6.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.1...v0.6.2) (2026-07-10)
 
 
