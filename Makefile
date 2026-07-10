@@ -14,7 +14,7 @@ check: ## Run all pre-commit tests
 	poetry run pre-commit run --all-files
 
 coverage: ## Run tests and show coverage report (TODO: increase to 80)
-	poetry run pytest tests --cov=netdoc_sdk --cov-report=term-missing --cov-fail-under=35
+	poetry run pytest tests --cov=netdoc_sdk --cov-report=term-missing --cov-fail-under=70
 
 doc:  ## build the documentation into site/
 	poetry run mkdocs build --strict
