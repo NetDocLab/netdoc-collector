@@ -97,7 +97,7 @@ def main() -> int:
     parser.add_argument('-T', '--timeout', help='Override backend timeout', type=int)
     parser.add_argument('-u', '--url', help='Override backend URL')
     parser.add_argument('--token', default=None, help='Override API token')
-    parser.add_argument('--verify', default=None, help='Override backend cert verification')
+    parser.add_argument('--insecure', action='store_true', help='Override backend insecure cert')
 
     args = parser.parse_args()
 
@@ -131,7 +131,7 @@ def main() -> int:
     backend_timeout = args.timeout or backend_data.get('timeout') or 120
     backend_token = os.getenv('NETDOC_TOKEN') or args.token or backend_data.get('token')
     backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
-    # backend_verify = args.verify or backend_data.get("verify", True)  # TODO
+    backend_insecure = args.insecure or backend_data.get('insecure', True)
 
     # Managed mode configuration
     background_threads: list[Thread] = []
@@ -157,7 +157,10 @@ def main() -> int:
             collector_name,
         )
         client = NetDocSyncClient(
-            base_url=backend_url, token=backend_token, timeout=backend_timeout
+            base_url=backend_url,
+            token=backend_token,
+            timeout=backend_timeout,
+            verify=not backend_insecure,
         )
 
         # Single heartbeat to validate token

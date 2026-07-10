@@ -42,7 +42,7 @@ backend:
   url: https://netdoc.example.com/api/v1
   timeout: 120
   token: null
-  verify: true
+  insecure: false
 ```
 
 ## Secrets example: `secrets.yaml`

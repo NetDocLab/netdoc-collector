@@ -8,6 +8,6 @@ inventory: ./inventory.json
 # Managed mode configuration
 backend:
   url: http://localhost:8000/
-  verify: true
+  insecure: false
   timeout: 120
   token: 725c907e5f00bd88fe4e03bfe6f02264561eb942
