@@ -24,6 +24,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show glbp',
             'show hostname',
             'show hsrp all',
+            'show interface status',
             'show interface switchport',
             'show interface trunk',
             'show interface',
