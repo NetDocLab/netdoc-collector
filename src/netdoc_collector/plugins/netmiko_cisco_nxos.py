@@ -40,6 +40,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show running-config',
             'show spanning-tree',
             'show spanning-tree root',
+            'show spanning-tree summary',
             'show vdc',
             'show version',
             'show vlan',
