@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.4](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.3...v0.6.4) (2026-07-13)
+
+
+### Bug Fixes
+
+* add show interface status on nxos ([2c43bfb](https://github.com/NetDocLab/netdoc-collector/commit/2c43bfb62d1d5c91cedf44edc16328cd752b55b3))
+* add show stp summary on nexus ([f9bcfbb](https://github.com/NetDocLab/netdoc-collector/commit/f9bcfbb0aaa1e216b7e2c068db0624b11013e5e7))
+
 ## [0.6.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.2...v0.6.3) (2026-07-10)
 
 
