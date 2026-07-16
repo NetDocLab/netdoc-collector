@@ -1,7 +1,7 @@
-"""Base plugin definitions and common utilities for NetDoc plugins.
+"""Base plugin definitions and shared utilities for NetDoc collectors.
 
-This module defines the abstract :class:`BasePlugin` class and shared helpers
-used by all vendor-specific collector plugins.
+This module defines the abstract BasePlugin class and helpers used by the
+vendor-specific collector plugins.
 """
 
 import json
@@ -45,18 +45,18 @@ class BasePlugin(ABC):
         self.cmd_timeout: int = cmd_timeout
 
         if report_path:
-            # Save report path to save logs locally
+            # Create a per-host report directory when output capture is enabled.
             self.report_path = report_path / Path(host_name)
             self.report_path.mkdir(exist_ok=True, parents=True)
 
     @staticmethod
     def parse_netmiko_output(raw_text, platform, cmd) -> None | list:
-        """Parse raw Netmiko command output to structured data.
+        """Parse raw Netmiko command output into structured data.
 
         Args:
-            raw_text (str): raw device output from Netmiko.
+            raw_text (str): raw device output returned by Netmiko.
             platform (str): Netmiko platform name used for parsing.
-            cmd (str): command string to identify the parser template.
+            cmd (str): command string used to identify the parser template.
 
         Returns:
             None | list: parsed output list, or None when parsing is unavailable.
@@ -64,7 +64,7 @@ class BasePlugin(ABC):
         try:
             parsed_text: list = get_structured_data(raw_text, platform=platform, command=cmd)
             if isinstance(parsed_text, list):
-                # Valid output is a list
+                # Valid output is a list.
                 return parsed_text
         except TextFSMError:
             pass
@@ -84,15 +84,15 @@ class BasePlugin(ABC):
 
     @abstractmethod
     def collect(self, task: Task) -> dict[str, Any]:
-        """Collect data from devices and return result in NetDoc format."""
+        """Collect data from a device and return it in NetDoc format."""
         ...
 
     def run_netmiko_cmd(self, task: Task, platform, cmd) -> tuple[str, None | list]:
-        """Execute a Netmiko command and optionally parse the result.
+        """Execute a Netmiko command and optionally parse its output.
 
         Args:
             task (Task): Nornir task context used to run the command.
-            platform (str): Netmiko platform used to parse the output.
+            platform (str): Netmiko platform used for parsing.
             cmd (str): command string to execute on the device.
 
         Returns:
@@ -101,10 +101,10 @@ class BasePlugin(ABC):
         logger.info('Running netmiko command %s on %s', cmd, self.host_name)
 
         try:
-            # Get or open Netmiko connection
+            # Open or reuse the Netmiko connection.
             net_connect = task.host.get_connection('netmiko', task.nornir.config)
 
-            # Privilege escalation only if required
+            # Enter enable mode only when it is required.
             if net_connect.secret and not net_connect.check_enable_mode():
                 logger.info('Entering enable mode on %s', self.host_name)
                 net_connect.enable()
@@ -132,7 +132,7 @@ class BasePlugin(ABC):
                 logger.error('Error running command %s on %s: %s', cmd, self.host_name, inner)
             raise
 
-        # Dump output files
+        # Dump output files for debugging and later inspection.
         raw_text = cmd_result.result
         parsed_text = self.parse_netmiko_output(raw_text, platform, cmd)
         self.write_output(raw_text, cmd)
@@ -148,19 +148,19 @@ class BasePlugin(ABC):
             label (str): command name or log label used to build the filename.
         """
         if not self.report_path:
-            # Write output if report path is set only
+            # Write output only when a report path is available.
             return
         if not content:
-            # Skipping empty content
+            # Skip empty content.
             return
 
         log_file = self.slugify(log)
         if isinstance(content, dict | list):
-            # Write a JSON file
+            # Write a JSON file.
             with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:
                 json.dump(content, fh, indent=2)
             return
 
-        # Write a raw content
+        # Write a text file.
         with open(self.report_path / Path(f'{log_file}.raw'), 'w') as fh:
             fh.write(content)

@@ -1,43 +1,22 @@
 # Contributing to netdoc-collector
 
-Thank you for your interest in contributing. This document covers the development
-workflow, tooling, and conventions used in this project.
-
----
-
-## Table of Contents
-
-- [Requirements](#requirements)
-- [Local Setup](#local-setup)
-- [Project Structure](#project-structure)
-- [Development Workflow](#development-workflow)
-- [Commit Convention](#commit-convention)
-- [Running Unit Tests](#running-unit-tests)
-- [Running Integration Tests](#running-integration-tests)
-- [Code Quality](#code-quality)
-- [Releasing](#releasing)
-
----
+Thank you for your interest in contributing to NetDoc Collector. This guide describes the development workflow, tooling, and conventions used in this project.
 
 ## Requirements
 
-- Python `>=3.12, <3.14`
-- [Poetry](https://python-poetry.org/) for dependency management
-- [pre-commit](https://pre-commit.com/) for local code quality hooks
+- Python >=3.12, <3.14
+- Poetry for dependency management
+- pre-commit for local quality hooks
 
----
-
-## Local Setup
+## Local setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/netdoclab/netdoc-collector.git
 cd netdoc-collector
 
-# Install dependencies (including dev extras)
+# Install dependencies and development hooks
 poetry install
-
-# Install pre-commit hooks
 pre-commit install
 pre-commit install --hook-type commit-msg
 
@@ -45,9 +24,7 @@ pre-commit install --hook-type commit-msg
 make check
 ```
 
----
-
-## Project Structure
+## Project structure
 
 ```text
 ├── CHANGELOG.md
@@ -58,203 +35,93 @@ make check
 ├── config-example.yaml
 ├── inventory-example.json
 ├── mkdocs.yml
-├── nornir.log
 ├── poetry.lock
 ├── pyproject.toml
 ├── release-please-config.json
 ├── secrets-example.yaml
 ├── src
-│   └── netdoc_collector
-│       ├── __init__.py
-│       ├── __main__.py
-│       ├── core
-│       │   ├── __init__.py
-│       │   ├── ansible_inventory.py
-│       │   ├── scanner.py
-│       │   ├── tasks.py
-│       │   └── utils.py
-│       ├── main.py
-│       └── plugins
-│           ├── __init__.py
-│           ├── base.py
-│           ├── dispatcher.py
-│           ├── netmiko_allied_telesis_awplus.py
-│           ├── netmiko_aruba_oscx.py
-│           ├── netmiko_cisco_ios.py
-│           ├── netmiko_cisco_nxos.py
-│           ├── netmiko_cisco_xr.py
-│           ├── netmiko_hp_comware.py
-│           ├── netmiko_hp_procurve.py
-│           ├── netmiko_huawei_vrp.py
-│           └── netmiko_linux.py
+│   └── netdoc_collector
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── core
+│       │   ├── __init__.py
+│       │   ├── ansible_inventory.py
+│       │   ├── scanner.py
+│       │   ├── tasks.py
+│       │   └── utils.py
+│       ├── main.py
+│       └── plugins
+│           ├── __init__.py
+│           ├── base.py
+│           ├── dispatcher.py
+│           ├── netmiko_allied_telesis_awplus.py
+│           ├── netmiko_aruba_oscx.py
+│           ├── netmiko_cisco_ios.py
+│           ├── netmiko_cisco_nxos.py
+│           ├── netmiko_cisco_xr.py
+│           ├── netmiko_hp_comware.py
+│           ├── netmiko_hp_procurve.py
+│           ├── netmiko_huawei_vrp.py
+│           └── netmiko_linux.py
 └── tests
 ```
 
----
+## Development workflow
 
-## Development Workflow
+Every change should follow this flow:
 
-Every change — no matter how small — follows this flow:
+1. Create a branch that reflects the scope of the change.
+2. Make a focused change and add or update tests where appropriate.
+3. Run the local validation checks before opening a pull request.
+4. Commit using the Conventional Commits format.
+5. Open a pull request against main.
 
-### 1. Create a branch
-
-Branch names should reflect the type and scope of the change:
-
-```bash
-git checkout -b fix/null-value-credential-serializer
-git checkout -b feat/retry-logic-5xx
-git checkout -b chore/bump-httpx-0-27
-```
-
-### 2. Make your change
-
-Keep changes small and focused. One logical change per commit.
-Add or update tests in `tests/` to cover your change.
-
-### 3. Check locally
-
-Run all pre-commit hooks before pushing:
+### Local checks
 
 ```bash
-make check       # pre-commit run --all-files
-make test        # pytest with coverage
+make check
+make test
 ```
 
-Both commands must pass cleanly before opening a pull request.
+## Commit convention
 
-### 4. Commit
-
-Follow the [Conventional Commits](#commit-convention) format.
-The `conventional-pre-commit` hook will reject commits that do not comply.
-
-### 5. Open a pull request
-
-- Target branch: `main`
-- The CI pipeline runs automatically on every push
-- The pull request cannot be merged until CI is green and at least one review is approved
-
-### 6. Merge
-
-Merges use **squash merge** to keep `main` linear.
-The branch is deleted after merge.
-
-### 7. Release
-
-`release-please` analyses commits on `main` after each merge and either:
-
-- Updates the pending release pull request, or
-- Creates a new one if none exists.
-
-Merging the release pull request triggers the CD pipeline:
-creates the git tag, publishes the GitHub Release, and uploads to PyPI.
-
----
-
-## Commit Convention
-
-This project follows [Conventional Commits](https://www.conventionalcommits.org/).
-The format is:
+This project follows Conventional Commits. The format is:
 
 ```text
 <type>[optional scope]: <short description>
-
-[optional body]
-
-[optional footer]
 ```
 
-### Types
+Common types include feat, fix, chore, docs, refactor, test, ci, build, and perf.
 
-| Type | When to use | Version bump |
-|---|---|---|
-| `feat` | New feature | `minor` |
-| `fix` | Bug fix | `patch` |
-| `chore` | Maintenance, dependencies, config | none |
-| `docs` | Documentation only | none |
-| `refactor` | Code change with no behaviour change | none |
-| `test` | Add or update tests | none |
-| `ci` | CI/CD pipeline changes | none |
-| `build` | Build system or packaging | none |
-| `perf` | Performance improvement | none |
-
-### Scope
-
-Use the module name as scope:
-
-```text
-feat(client):     src/netdoc_sdk/client.py
-fix(models):      src/netdoc_sdk/models.py
-fix(exceptions):  src/netdoc_sdk/exceptions.py
-chore(builders):  src/netdoc_sdk/builders.py
-```
-
-### Examples
+Examples:
 
 ```bash
-# New feature → 0.1.9 → 0.2.0
-git commit -m "feat(client): add retry logic on 5xx responses"
-
-# Bug fix → 0.1.9 → 0.1.10
-git commit -m "fix(models): handle null value in credential serializer"
-
-# Dependencies
-git commit -m "chore(deps): bump httpx from 0.26 to 0.27"
-
-# Documentation
-git commit -m "docs: add authentication example to README"
-
-# Breaking change → 0.1.9 → 1.0.0
-git commit -m "feat!: remove deprecated v1 authentication method"
-
-# Breaking change with migration notes
-git commit -m "feat(auth): replace API key with OAuth2 token
-
-BREAKING CHANGE: ApiKeyClient removed, use OAuth2Client instead.
-See the migration guide: https://github.com/dainok/netdoc/wiki/migration-v2"
+git commit -m "feat(scanner): add host discovery for SSH-only devices"
+git commit -m "fix(tasks): handle canceled jobs gracefully"
+git commit -m "docs: improve CLI usage examples"
 ```
 
----
+## Running tests
 
-## Running Unit Tests
+Run the full test suite:
 
 ```bash
-# Run full test suite with coverage report
 make test
-
-# Run a specific test file
-pytest tests/unit/test_001_normalize_base_url.py -v
-
-# Run a specific test function
-pytest tests/unit/test_001_normalize_base_url.py::test_trailing_slash -v
-
-# Run only unit tests
-pytest tests/unit/ -v
-
-# Run with coverage and open the HTML report
-pytest --cov=netdoc_sdk --cov-report=html
-open htmlcov/index.html
 ```
 
-The minimum required coverage is **80%**. The CI pipeline enforces this threshold
-and will fail if it is not met.
-
----
-
-## Running Integration Tests
-
-A local Cisco IOS-XE device is required to run the integration tests. Create a .env file with the following information:
-
-```text
-NETDOC_DEVICE_ADDRESS='192.168.0.1'
-NETDOC_DEVICE_USERNAME='admin'
-NETDOC_DEVICE_PASSWORD='cisco'
-```
-
-Then run the integration tests:
+Run a specific test file when debugging a targeted area:
 
 ```bash
-# Run integration tests
-pytest pytest tests/integration -v
+pytest tests/unit/test_005_main.py -v
+```
+
+## Code quality
+
+The repository uses pre-commit checks and Ruff formatting. Run the following commands locally if needed:
+
+```bash
+poetry run ruff check .
+poetry run ruff format .
 ```
 
 ---

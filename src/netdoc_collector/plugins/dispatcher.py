@@ -1,11 +1,6 @@
-"""
-Plugin dispatcher.
+"""Plugin dispatcher for NetDoc collector plugins.
 
-Maps (vendor, platform) tuples to plugin classes.
-To add a new vendor/platform, simply import the plugin class and add
-a new entry to PLUGIN_REGISTRY — no other file needs to change.
-
-Example registry key: ("cisco", "ios") -> CiscoIOSPlugin
+The dispatcher maps plugin identifiers to their implementation classes.
 """
 
 import logging
@@ -46,7 +41,7 @@ def get_plugin(plugin: str, *args, **kwargs) -> BasePlugin:
     """Instantiate the configured plugin for a registered NetDoc platform.
 
     Args:
-        plugin (str): plugin identifier key, e.g. "netmiko:cisco:ios:ssh".
+        plugin (str): plugin identifier key, for example "netmiko:cisco:ios:ssh".
         *args: positional arguments forwarded to the plugin constructor.
         **kwargs: keyword arguments forwarded to the plugin constructor.
 

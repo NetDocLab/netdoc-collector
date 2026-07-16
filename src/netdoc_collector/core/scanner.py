@@ -1,8 +1,8 @@
-"""Sync network scanner and host discovery utilities.
+"""Threaded network scanner and host discovery helpers.
 
-This module implements a threaded TCP port scanner that can optionally
-probe SSH endpoints with Netmiko to detect device types and map them to
-NetDoc plugins.
+This module implements a lightweight TCP scanner that can optionally probe
+SSH endpoints with Netmiko to identify device types and map them to the
+appropriate NetDoc plugin.
 """
 
 import json
@@ -30,9 +30,9 @@ class HostResult:
     Attributes:
         ip: host IP address.
         port: first responsive port discovered.
-        netmiko_device_type: Netmiko autodetect device type.
+        netmiko_device_type: detected Netmiko device type.
         netdoc_plugin: mapped NetDoc plugin identifier.
-        credential: credential record used for probing.
+        credential: credential record used for the scan attempt.
     """
 
     ip: str
@@ -87,7 +87,7 @@ class NetworkScanner:
         self.networks = networks
 
     def _check_port(self, ip: str, port: int) -> bool:
-        """Return True if the TCP port is open on the given host."""
+        """Return True when the TCP port is open on the given host."""
         try:
             with socket.create_connection((ip, port), timeout=self.timeout):
                 return True
@@ -95,16 +95,17 @@ class NetworkScanner:
             return False
 
     def _probe_host_via_netmiko(self, ip: str) -> tuple[str | None, dict[str, str] | None]:
-        """Probe the OS fingerprint of a host via Netmiko SSH autodetect.
+        """Probe the operating system of a host through Netmiko autodetection.
 
-        Iterates over all configured credentials until one succeeds or all fail.
+        The scanner tries each configured credential until one succeeds or all
+        attempts fail.
 
         Args:
             ip: target host IP address.
 
         Returns:
             A (device_type, credential) tuple on success, or (None, None) if
-            no credential matched or the device type could not be determined.
+            no credential matched or no device type could be determined.
         """
         for credential in self.credentials:
             label = credential.get('label')
@@ -112,7 +113,7 @@ class NetworkScanner:
             password = credential.get('password')
 
             if not username or not password:
-                # Skip hosts without username and passwords
+                # Skip credential sets that are incomplete.
                 continue
 
             logger.info(
@@ -128,7 +129,7 @@ class NetworkScanner:
                     password=password,
                 )
             except NetmikoAuthenticationException:
-                # Credential rejected — try the next one
+                # The credential was rejected; try the next one.
                 logger.info('Credential %s rejected for %s', label or '(unlabeled)', ip)
                 continue
 
@@ -140,9 +141,10 @@ class NetworkScanner:
         return None, None
 
     def _scan_host(self, ip: str) -> HostResult | None:
-        """Scan all configured ports on a single host.
+        """Scan a single host and return a discovery result if supported.
 
-        Returns a HostResult if a supported device is found, otherwise None.
+        Returns a HostResult when a supported device is identified; otherwise
+        returns None.
 
         Args:
             ip: target host IP address.
@@ -183,8 +185,7 @@ class NetworkScanner:
     def scan(self) -> list[HostResult]:
         """Scan all configured networks and return discovered hosts.
 
-        Uses a thread pool to scan hosts concurrently. Results are collected
-        as futures complete and returned sorted by IP address.
+        The scan runs concurrently and returns results sorted by IP address.
 
         Returns:
             List of HostResult for each discovered and identified host.

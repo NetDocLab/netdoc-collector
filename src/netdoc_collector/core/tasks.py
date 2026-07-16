@@ -1,9 +1,8 @@
-"""Nornir discovery task and plugin dispatch helpers.
+"""Nornir discovery tasks and plugin dispatch helpers.
 
-This module implements the task executed by Nornir for every host in the
-inventory. It resolves the configured NetDoc plugin, executes device
-collection, and — in managed mode — pushes the collected data and the
-host's own log records to the backend before the task returns.
+This module runs device discovery for each host in the inventory. In managed
+mode it also uploads the collected results and host-specific log records to
+NetDoc before returning.
 """
 
 import logging
@@ -25,11 +24,11 @@ def send_collector_heartbeat(
     stop_event: Event,
     interval: int = 30,
 ) -> None:
-    """Send periodic collector heartbeat.
+    """Send periodic collector heartbeats until shutdown is requested.
 
-    Runs in a dedicated background thread until ``stop_event`` is set.
-    Any communication failure stops the heartbeat and requests shutdown
-    by setting the shared stop event.
+    Runs in a dedicated background thread until stop_event is set. Any
+    communication failure stops the heartbeat and requests shutdown by setting
+    the shared stop event.
     """
     while not stop_event.is_set():
         try:
@@ -48,22 +47,20 @@ def mark_job_as_completed(
     status: str,
     logs: list[logging.LogRecord] | None = None,
 ) -> None:
-    """Close the current discovery job with the given final status.
+    """Close the current discovery job with the requested final status.
 
-    Used both by the normal end-of-run flow and by the signal handler, so
-    the job-closing request is built in exactly one place regardless of
-    which of the three terminal states applies.
+    Used for both the normal end-of-run flow and signal-driven shutdown.
 
     Args:
-        collector_client: Client instance.
-        id: Discovery job identifier.
-        claim_token: Claim token for the current collector.
-        status: Final job status ('completed', 'failed', or 'canceled').
-        logs: Job-level log records to attach.
+        collector_client: NetDoc SDK client instance.
+        id: discovery job identifier.
+        claim_token: claim token for the current collector.
+        status: final status ('completed', 'failed', or 'canceled').
+        logs: job-level log records to attach to the completion request.
 
     Raises:
-        ValidationError: propagated so callers that need a distinct exit
-            code (e.g. the normal end-of-run flow) can react to it.
+        ValidationError: propagated so callers can react with a distinct exit
+            code when needed.
     """
     if status == 'completed':
         logging.info('Closing discovery job %s as %s', id, status)
@@ -90,28 +87,25 @@ def discovery_task(
     cancel_event: Event,
     cmd_timeout: int | None = None,
 ) -> Result:
-    """Execute discovery for a single host and, in managed mode, push its results.
+    """Execute discovery for a single host and push results in managed mode.
 
-    Log records emitted while processing this host (on this worker thread)
-    are collected via ``collect_task_logs`` and pushed to the backend
-    together with the collected raw/parsed outputs, in a single request,
-    right before the task returns.
+    Log records emitted while processing this host are collected and uploaded
+    together with the raw and parsed outputs before the task returns.
 
-    Before doing any work, checks ``cancel_event``: if the job has already
-    been marked as canceling by another host's push response, this task is
-    skipped immediately rather than running discovery on a job that is
-    being torn down.
+    Before doing any work, the task checks cancel_event. If another host's
+    push response already marked the job as cancelling, this task exits early
+    instead of continuing discovery work.
 
     Args:
-        task: Nornir task.
-        report_path: Directory where raw reports are stored.
-        client: NetDoc SDK client; ``None`` in stand-alone mode (no push).
-        job_id: Discovery job identifier (managed mode only).
-        claim_token: Claim token for the current collector (managed mode only).
-        idempotency_key: Job idempotency key (managed mode only).
-        cancel_event: shared event, set when the backend reports the job
-            status as 'canceling' in a push response.
-        cmd_timeout: Optional command timeout override.
+        task: Nornir task instance.
+        report_path: directory used to store raw reports.
+        client: NetDoc SDK client; None in stand-alone mode.
+        job_id: discovery job identifier (managed mode only).
+        claim_token: claim token for the current collector (managed mode only).
+        idempotency_key: job idempotency key (managed mode only).
+        cancel_event: shared event set when the backend reports the job as
+            cancelling.
+        cmd_timeout: optional per-command timeout override.
 
     Returns:
         Nornir Result object.
@@ -181,25 +175,24 @@ def _push_discovered_device(
     task_logs: list[logging.LogRecord],
     cancel_event: Event,
 ) -> None:
-    """Push raw/parsed outputs and collected logs for a single host.
+    """Push raw and parsed outputs plus task logs for a single host.
 
-    Failures are logged but never raised: a push failure must not affect
-    the Nornir task result already computed for this host.
+    Failures are logged but do not raise. A push failure must not overwrite the
+    result already computed for the host.
 
-    If the backend response reports the job status as 'canceling', sets
-    ``cancel_event`` so that other in-flight or not-yet-started tasks skip
-    their work as soon as possible.
+    If the backend reports the job status as cancelling, the shared event is
+    set so that other in-flight or pending tasks stop promptly.
 
     Args:
         client: NetDoc SDK client.
-        job_id: Discovery job identifier.
-        claim_token: Claim token for the current collector.
-        idempotency_key: Job idempotency key.
+        job_id: discovery job identifier.
+        claim_token: claim token for the current collector.
+        idempotency_key: job idempotency key.
         host: Nornir host object.
-        result: Result already computed for this host's discovery task.
-        task_logs: Log records captured while processing this host.
-        cancel_event: shared event, set when the backend reports the job
-            status as 'canceling' in a push response.
+        result: result already computed for the host's discovery task.
+        task_logs: log records captured while processing this host.
+        cancel_event: shared event set when the backend reports that the job is
+            being cancelled.
     """
     try:
         response = client.discovery_jobs_push_discovered_device(
