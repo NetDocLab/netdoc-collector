@@ -21,6 +21,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
         # Standard commands
         return [
             'show cdp neighbors detail',
+            'show fabricpath route',
             'show glbp',
             'show hostname',
             'show hsrp all',
@@ -46,7 +47,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show version',
             'show vlan',
             'show vpc',
-            'show vrf',
+            'show vrf detail',
             'show vrrp',
         ]
 
@@ -65,7 +66,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                     parsed_payload[cmd] = parsed_output
 
             # Running VRF aware commands
-            vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf', [])]
+            vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf detail', [])]
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
                     raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
