@@ -60,6 +60,7 @@ class TestManagedCollector:
         )
 
         # Create canonical device
+        site = admin_client.sites_add(name='test-site')
         admin_client.canonical_devices_add(
             label='test-canonical-device',
             identifiers={'hostname': 'sw1'},
@@ -67,6 +68,7 @@ class TestManagedCollector:
             discovery_mode='netmiko:cisco:ios:ssh',
             is_discoverable=True,
             credential=credential.id,
+            site=site.id,
         )
 
         # Create collector (heartbeat)

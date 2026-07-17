@@ -1,4 +1,4 @@
-"""Console entrypoint for the netdoc-collector package."""
+"""Console entry point for the netdoc-collector package."""
 
 import sys
 

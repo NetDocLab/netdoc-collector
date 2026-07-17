@@ -1,11 +1,11 @@
-# NetDoc Discovery configuration file
+# Example configuration for NetDoc Collector
 cmd_timeout: 120
 output: ./output
 retention: 5
 workers: 5
-# Stand-alone mode configuration
+# Stand-alone mode settings
 inventory: ./inventory.json
-# Managed mode configuration
+# Managed mode settings
 backend:
   url: http://localhost:8000/
   insecure: false

@@ -1,6 +1,7 @@
-"""Ansible inventory plugin for Nornir.
+"""Ansible inventory support for Nornir.
 
-This plugin supports JSON inventory files, inventory dicts, and executable dynamic inventory scripts.
+This module loads inventory data from JSON files, dictionaries, or executable
+inventory scripts and exposes it to Nornir as an inventory object.
 """
 
 import json
@@ -25,10 +26,11 @@ class NetDocAnsibleInventory:
         self,
         inventory: str | dict,
     ) -> None:
-        """Ansible Dynamic Inventory plugin supporting JSON files, dict and executable files.
+        """Initialize the inventory plugin from a file, dictionary, or executable script.
 
         Args:
-            inventory: path to a valid Ansible JSON file, executable inventory script, or inventory dict
+            inventory: path to an Ansible JSON file, executable inventory script,
+                or an in-memory inventory dictionary.
         """
         if isinstance(inventory, dict):
             logging.info('Reading inventory from dict')
@@ -78,7 +80,7 @@ class NetDocAnsibleInventory:
             raise ValueError(f"Inventory script '{path}' returned invalid JSON: {e}") from e
 
     def load(self) -> Inventory:
-        """Load the current inventory into a Nornir Inventory object."""
+        """Load the current inventory into a Nornir inventory object."""
         defaults = Defaults()
         hosts = Hosts()
         groups = Groups()

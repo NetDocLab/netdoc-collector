@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""NetDoc collector command-line entrypoint and task orchestration.
+"""Command-line entry point and orchestration logic for NetDoc Collector.
 
-This module defines the synchronous collector application that can run
-in either stand-alone or managed mode. It parses CLI arguments, loads
-configuration, initializes Nornir, executes discovery tasks, and handles
-upload of raw discovery payloads to the NetDoc backend.
+This module parses CLI arguments, loads configuration, initializes Nornir,
+executes discovery tasks, and optionally pushes the resulting data to the
+NetDoc backend in managed mode.
 """
 
 import argparse
@@ -57,8 +56,8 @@ def _stop_background_threads(threads: list[Thread], stop_event: Event) -> None:
     """Signal all background threads to stop and wait for them to finish.
 
     Args:
-        threads: list of running background threads.
-        stop_event: shared stop event to signal threads.
+        threads: running background threads that should be stopped.
+        stop_event: shared event used to request shutdown.
     """
     stop_event.set()
     for thread in threads:
@@ -67,10 +66,11 @@ def _stop_background_threads(threads: list[Thread], stop_event: Event) -> None:
 
 
 def main() -> int:
-    """Parse CLI arguments and execute the NetDoc collector workflow.
+    """Parse CLI arguments and run the collector workflow.
 
     Returns:
-        int: exit code; 0 on success, non-zero on failure.
+        int: exit code. Zero indicates success; non-zero values indicate
+            failures or abnormal termination.
     """
 
     parser = argparse.ArgumentParser(description='NetDoc collector')
@@ -146,7 +146,7 @@ def main() -> int:
     # Shared stop event: any background task can set this to request a clean shutdown.
     stop_event = Event()
 
-    # Evaluating mode
+    # Evaluate whether runtime should use managed or stand-alone mode.
     if backend_url and backend_token:
         job_log_collector = MainLogCollector()
         logging.getLogger().addHandler(job_log_collector)
@@ -187,7 +187,7 @@ def main() -> int:
         background_threads.append(heartbeat_thread)
 
     elif scan:
-        # Running in stand-alone mode (scan)
+        # Running in stand-alone mode (scan).
         logger.info('Running in stand-alone mode (scan)')
 
         # Load credentials from secrets.yaml
@@ -220,7 +220,7 @@ def main() -> int:
                 networks.append(network)
 
     elif inventory_file:
-        # Running in stand-alone mode (discovery)
+        # Running in stand-alone mode (discovery).
         logger.info('Running in stand-alone mode (inventory_file=%s)', inventory_file)
         with open(inventory_file) as fh:
             try:
@@ -307,7 +307,7 @@ def main() -> int:
         _stop_background_threads(background_threads, stop_event)
         return 9
 
-    # Initialising Nornir for managed and stand-alone modes
+    # Initialize Nornir for managed and stand-alone modes.
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
     InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
     nr = InitNornir(
@@ -319,7 +319,7 @@ def main() -> int:
         logging={'enabled': False},
     )
 
-    # Running discovery tasks
+    # Run discovery tasks.
     logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
     results = nr.run(
         task=discovery_task,
@@ -336,10 +336,10 @@ def main() -> int:
     completed_hosts = total_hosts - failed_hosts
     logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
 
-    # Cleaning older outputs
+    # Clean older outputs.
     cleanup_old_snapshots(output_dir, retention)
 
-    # Closing task (managed mode)
+    # Close the job in managed mode.
     if client and job_id and claim_token:
         # Close the job
         if cancel_event.is_set():
@@ -371,7 +371,7 @@ def main() -> int:
 
 
 def entrypoint() -> int:
-    """Execute the collector entrypoint from a console script."""
+    """Execute the collector entry point from a console script."""
     return main()
 
 

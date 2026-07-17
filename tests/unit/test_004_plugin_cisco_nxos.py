@@ -48,12 +48,12 @@ class TestCommands:
         assert 'show version' in cmds
         assert 'show running-config' in cmds
         assert 'show interface' in cmds
-        assert 'show vrf' in cmds
+        assert 'show vrf detail' in cmds
 
     def test_no_vrf_does_not_contain_vrf_suffix_commands(self):
         """Standard commands must not include per-VRF variants."""
         cmds = NetmikoCiscoNxosPlugin.commands()
-        cmds.remove('show vrf')
+        cmds.remove('show vrf detail')
         cmds.remove('show ip interface vrf all')
         cmds.remove('show ip route vrf all')
         vrf_cmds = [c for c in cmds if 'vrf' in c]
@@ -144,7 +144,7 @@ class TestCollectHappyPath:
         show_vrf_parsed = [{'name': 'MGMT'}, {'name': 'PROD'}]
 
         def side_effect(task, platform, cmd):
-            if cmd == 'show vrf':
+            if cmd == 'show vrf detail':
                 return ('raw vrf output', show_vrf_parsed)
             return ('raw', None)
 
@@ -161,7 +161,7 @@ class TestCollectHappyPath:
             plugin.collect(mock_task)
 
         called_cmds = [c.args[2] for c in mock_cmd.call_args_list]
-        called_cmds.remove('show vrf')
+        called_cmds.remove('show vrf detail')
         called_cmds.remove('show ip interface vrf all')
         called_cmds.remove('show ip route vrf all')
         named_vrf_cmds = [c for c in called_cmds if 'vrf' in c and 'vrf default' not in c]
@@ -188,13 +188,14 @@ class TestCollectHappyPath:
         show_vrf_parsed = [{'name': 'MGMT'}]
 
         def side_effect(task, platform, cmd):
-            if cmd == 'show vrf':
+            if cmd == 'show vrf detail':
                 return ('vrf raw', show_vrf_parsed)
             return (f'output of {cmd}', None)
 
         with patch.object(plugin, 'run_netmiko_cmd', side_effect=side_effect):
             result = plugin.collect(mock_task)
 
+        print("DAINO", result['raw_outputs'])
         assert 'show ip arp vrf MGMT' in result['raw_outputs']
 
 

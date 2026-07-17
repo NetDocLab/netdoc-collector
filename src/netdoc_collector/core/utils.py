@@ -1,7 +1,7 @@
-"""Utility helpers for configuration loading and report directory management.
+"""Shared helpers for configuration loading and report management.
 
-This module provides shared utilities used by the collector, including
-configuration loading, snapshot cleanup, and structured log record handling.
+This module provides utilities for snapshot cleanup, YAML configuration
+loading, and structured log handling used across the collector.
 """
 
 import logging
@@ -19,13 +19,11 @@ REPORT_PATH_FMT = '%Y%m%d-%H%M%S'
 
 
 class MainLogCollector(logging.Handler):
-    """Collects log records that do not belong to any per-host task.
+    """Collect log records that do not belong to a per-host task.
 
-    Task-level records are already isolated and pushed per-host by
-    ``collect_task_logs``. This handler captures everything else emitted
-    while a job is in progress — heartbeat failures, job claim/setup
-    messages, signal handling — using a shared thread-local flag to skip
-    records emitted by a worker thread while it is inside a task context.
+    Task-level records are isolated and pushed per host by collect_task_logs.
+    This handler captures the remaining records emitted while a job is in
+    progress, including heartbeat and setup messages.
     """
 
     def __init__(self, level: int = logging.INFO):
@@ -46,12 +44,10 @@ class MainLogCollector(logging.Handler):
 
 
 class ThreadLogCollector(logging.Handler):
-    """Collects log records emitted by the calling thread only.
+    """Collect log records emitted by the calling thread only.
 
-    Safe with Nornir's threaded runner: each worker thread processes one
-    host synchronously from start to finish, so filtering by thread id
-    isolates that host's log records even while other worker threads log
-    concurrently for other hosts.
+    This is safe for Nornir's threaded runner because each worker thread
+    processes one host synchronously from start to finish.
     """
 
     def __init__(self, level=logging.INFO):
@@ -68,9 +64,8 @@ class ThreadLogCollector(logging.Handler):
 def collect_task_logs(level: int = logging.INFO):
     """Temporarily capture log records emitted by the calling thread.
 
-    Marks the current thread as "inside a task" for the duration of the
-    context, so a concurrently active JobLogCollector skips these records
-    and does not push them a second time at job completion.
+    The current thread is marked as active for the duration of the context so
+    that main log collection does not capture the same records twice.
     """
     handler = ThreadLogCollector(level=level)
     root_logger = logging.getLogger()

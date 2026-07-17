@@ -1,24 +1,24 @@
 # NetDoc Collector
 
-NetDoc Collector is the network discovery and collector component used by NetDoc. It runs probes against network devices (via SSH/telnet/HTTPS) and creates per-device raw payloads that the NetDoc backend can ingest.
+NetDoc Collector is the discovery and data collection component used by NetDoc. It connects to network devices over SSH, Telnet, or HTTPS, runs vendor-specific commands, and stores the resulting raw data for downstream processing.
 
-This repository uses `mkdocs` with the root `README.md` as the homepage and `mkdocstrings` to generate API reference content from `src/netdoc_collector`.
+This repository uses MkDocs for documentation and MkDocstrings to generate API reference pages from the source code in src/netdoc_collector.
 
 ## Installation
 
-Recommended install for development:
+For local development, install the project dependencies with Poetry:
 
 ```bash
 poetry install
 ```
 
-Install the package in editable mode if you want the CLI available immediately:
+If you want the CLI to be available immediately in your environment, install the package in editable mode:
 
 ```bash
 poetry run pip install -e .
 ```
 
-Run the command-line tool:
+Verify that the command-line interface is available:
 
 ```bash
 poetry run netdoc-collector --help
@@ -26,10 +26,10 @@ poetry run netdoc-collector --help
 
 ## Modes
 
-- **Stand-alone mode**: read a local Ansible-style JSON inventory and collect data locally.
-- **Managed mode**: claim jobs from the NetDoc backend, run collection, and push results back.
+- Stand-alone mode: read a local Ansible-style JSON inventory and collect data from the listed devices.
+- Managed mode: claim a discovery job from the NetDoc backend, collect the required data, and push the results back.
 
-## Configuration example: `config.yaml`
+## Configuration example: config.yaml
 
 ```yaml
 inventory: inventory.json
@@ -45,9 +45,9 @@ backend:
   verify: true
 ```
 
-## Secrets example: `secrets.yaml`
+## Secrets example: secrets.yaml
 
-This file stores credentials used by the collector's scanner and collection logic. Keep it out of version control and protect it with restrictive file permissions.
+Store credentials in this file for the scanner and collection logic. Keep it out of version control and protect it with restrictive file permissions.
 
 ```yaml
 credentials:
@@ -60,9 +60,9 @@ credentials:
     password: read0nly
 ```
 
-## Inventory example: `inventory.json`
+## Inventory example: inventory.json
 
-The collector accepts Ansible-style JSON inventory with `_meta.hostvars` and host-specific connection details.
+The collector accepts Ansible-style JSON inventory data with _meta.hostvars and host-specific connection details.
 
 ```json
 {
@@ -113,7 +113,7 @@ export NETDOC_TOKEN="<your-api-token>"
 netdoc-collector --url https://netdoc.example.com --token "$NETDOC_TOKEN"
 ```
 
-Or pass credentials directly:
+You can also provide the token directly on the command line:
 
 ```bash
 netdoc-collector --url https://netdoc.example.com --token mytoken --workers 8
@@ -121,7 +121,7 @@ netdoc-collector --url https://netdoc.example.com --token mytoken --workers 8
 
 ## Output
 
-Discovery snapshots are written into the configured `output` directory in timestamped folders. Each host gets a subdirectory with JSON payloads and raw command output files.
+Discovery snapshots are written to the configured output directory in timestamped folders. Each host receives its own subdirectory containing JSON payloads and raw command output files.
 
 ## Developer quickstart
 
@@ -155,8 +155,8 @@ poetry run ruff format .
 
 ## Documentation
 
-This project publishes docs from the root `README.md` and reference pages generated from source code using `mkdocstrings`.
+The published documentation is built from this README and the API reference pages generated from the source code.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for contribution guidelines, branch conventions, and CI requirements.
+See CONTRIBUTING.md for contribution guidelines, branch conventions, and CI requirements.
