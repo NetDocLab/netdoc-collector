@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.5](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.4...v0.6.5) (2026-07-17)
+
+
+### Bug Fixes
+
+* update poetry lock ([5a41ab9](https://github.com/NetDocLab/netdoc-collector/commit/5a41ab902ac2a85ae6bf9647d28c4a6eea958b97))
+* update sdk version and tests ([04de70a](https://github.com/NetDocLab/netdoc-collector/commit/04de70a54b7ae3307697a73ad1e2feae816c2c97))
+
 ## [0.6.4](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.3...v0.6.4) (2026-07-13)
 
 
