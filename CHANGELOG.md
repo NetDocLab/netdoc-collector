@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.6](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.5...v0.6.6) (2026-07-19)
+
+
+### Bug Fixes
+
+* linting ([ec33355](https://github.com/NetDocLab/netdoc-collector/commit/ec333552b6bb9161e5b44d9675c5a14da285fc5a))
+* update sdk ([b4d561c](https://github.com/NetDocLab/netdoc-collector/commit/b4d561c03d7255f662806f7186c5813cb0c912ab))
+
 ## [0.6.5](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.4...v0.6.5) (2026-07-17)
 
 
