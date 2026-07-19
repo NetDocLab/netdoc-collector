@@ -30,3 +30,7 @@ lint: ## Code linting (check only)
 tests: ## Run tests (pytest only)
 	poetry run pytest tests/unit -v --tb=short
 	poetry run pytest tests/integration -v --tb=short
+
+update: ## Update poetry, SDK
+	poetry add netdoc-sdk@latest
+	poetry lock
