@@ -195,7 +195,6 @@ class TestCollectHappyPath:
         with patch.object(plugin, 'run_netmiko_cmd', side_effect=side_effect):
             result = plugin.collect(mock_task)
 
-        print("DAINO", result['raw_outputs'])
         assert 'show ip arp vrf MGMT' in result['raw_outputs']
 
 
