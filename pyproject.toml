@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "netdoc-sdk==0.6.8",
+    "netdoc-sdk (>=0.6.9,<0.7.0)",
     "netmiko==4.6.0",
     "nornir==3.5.0",
     "nornir-netmiko==1.0.1",
