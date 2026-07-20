@@ -82,6 +82,7 @@ pydantic = {extras = ["email"], version = "^2.13.4"}
 pytest-django = "^4.12.0"
 
 # Code quality
+cyclonedx-bom = "^7.3.0"
 mypy = ">=1.7"
 ruff = ">=0.1"
 

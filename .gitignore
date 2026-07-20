@@ -387,7 +387,6 @@ Backup of *.doc*
 
 # Build artifacts and security outputs
 artifacts/
-sbom-cyclonedx.json
 
 # Secret files (never commit these)
 secrets.json
