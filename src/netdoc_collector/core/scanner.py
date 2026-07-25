@@ -8,6 +8,7 @@ appropriate NetDoc plugin.
 import json
 import logging
 import socket
+from netdoc_sdk.client import NetDocSyncClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network
@@ -74,17 +75,21 @@ class NetworkScanner:
 
     def __init__(
         self,
-        ports: list[int],
-        timeout: float,
         concurrency: int,
         credentials: list[dict],
         networks: list[IPv4Network],
+        ports: list[int],
+        timeout: float,
+        client: NetDocSyncClient|None = None,
+        excluded_addresses: list[str] = list,
     ) -> None:
-        self.ports = ports
-        self.timeout = timeout
         self.concurrency = concurrency
         self.credentials = credentials
         self.networks = networks
+        self.ports = ports
+        self.timeout = timeout
+        self.client = client
+        self.excluded_addresses = excluded_addresses
 
     def _check_port(self, ip: str, port: int) -> bool:
         """Return True when the TCP port is open on the given host."""
@@ -143,8 +148,10 @@ class NetworkScanner:
     def _scan_host(self, ip: str) -> HostResult | None:
         """Scan a single host and return a discovery result if supported.
 
-        Returns a HostResult when a supported device is identified; otherwise
-        returns None.
+        Returns a HostResult only when a supported device is identified AND
+        a working credential was found (i.e. login succeeded); otherwise
+        returns None. This is what guarantees that every HostResult produced
+        by scan() is safe to hand straight to discovery.
 
         Args:
             ip: target host IP address.
@@ -186,6 +193,10 @@ class NetworkScanner:
         """Scan all configured networks and return discovered hosts.
 
         The scan runs concurrently and returns results sorted by IP address.
+        This call blocks until the scan phase is fully complete; the caller
+        is expected to run the discovery phase only after this method
+        returns, so the two phases stay strictly sequential (scan finishes
+        entirely, then discovery starts on its result).
 
         Returns:
             List of HostResult for each discovered and identified host.
@@ -214,12 +225,21 @@ class NetworkScanner:
         return results
 
     @staticmethod
-    def save_inventory(hosts: list[HostResult], path: str) -> None:
-        """Save a host inventory file in standard Ansible JSON format.
+    def build_inventory(hosts: list[HostResult]) -> dict[str, Any]:
+        """Build an in-memory Ansible-style inventory dict from scan results.
+
+        Only hosts that were successfully identified during the scan are
+        included here: scan() already drops any host whose credentials
+        failed or whose OS/plugin could not be resolved, so every entry
+        returned by this method has a working login and a supported NetDoc
+        plugin, ready to be handed directly to the discovery task.
 
         Args:
             hosts: discovered hosts to serialize.
-            path: path to the output JSON file.
+
+        Returns:
+            Inventory dict in the same shape as the on-disk JSON format
+            produced by save_inventory().
         """
         inventory: dict[str, Any] = {
             '_meta': {'hostvars': {}},
@@ -235,6 +255,23 @@ class NetworkScanner:
                 'netmiko_device_type': host.netmiko_device_type,
             }
             inventory['all']['hosts'].append(host.ip)
+        return inventory
 
-        Path(path).write_text(json.dumps(inventory, indent=4, sort_keys=True))
-        logger.info('Inventory saved to %s', path)
+    @classmethod
+    def complete(cls, hosts, inventory_file=None) -> None:
+        # TODO
+        """Save a host inventory file in standard Ansible JSON format.
+
+        Kept for debugging/audit purposes only: discovery no longer needs to
+        read this file back, since scanned hosts are now fed directly into
+        the discovery run via build_inventory().
+
+        Args:
+            hosts: discovered hosts to serialize.
+            path: path to the output JSON file.
+        """
+        inventory = cls.build_inventory(hosts)
+        if inventory_file:
+            logger.info('Writing scan results to %s', inventory_file)
+            Path(inventory_file).write_text(json.dumps(inventory, indent=4, sort_keys=True))
+            logger.info('Inventory saved to %s', inventory_file)

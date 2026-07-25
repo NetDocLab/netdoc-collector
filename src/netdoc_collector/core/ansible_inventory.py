@@ -20,8 +20,11 @@ from nornir.core.inventory import (
     ParentGroups,
 )
 
+class NetDocAnsibleInventoryError(Exception):
+    pass
 
 class NetDocAnsibleInventory:
+
     def __init__(
         self,
         inventory: str | dict,
@@ -44,7 +47,7 @@ class NetDocAnsibleInventory:
                 with open(inventory) as fh:
                     self.inventory = json.load(fh)
         else:
-            raise ValueError('Inventory is not valid')
+            raise NetDocAnsibleInventoryError('Inventory is not valid')
 
         # Inventory format validation occurs during Nornir host construction.
 
