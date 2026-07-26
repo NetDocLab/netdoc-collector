@@ -51,11 +51,11 @@ Store credentials in this file for the scanner and collection logic. Keep it out
 
 ```yaml
 credentials:
-  - label: default
+  - id: default
     username: admin
     password: Passw0rd!
     secret: enable_secret
-  - label: readonly
+  - id: readonly
     username: readonly
     password: read0nly
 ```

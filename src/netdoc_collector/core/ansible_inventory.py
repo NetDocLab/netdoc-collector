@@ -20,11 +20,12 @@ from nornir.core.inventory import (
     ParentGroups,
 )
 
+
 class NetDocAnsibleInventoryError(Exception):
     pass
 
-class NetDocAnsibleInventory:
 
+class NetDocAnsibleInventory:
     def __init__(
         self,
         inventory: str | dict,

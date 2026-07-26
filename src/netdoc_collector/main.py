@@ -29,13 +29,15 @@ from importlib.metadata import version
 from pathlib import Path
 from threading import Event, Thread
 
-import psutil
 from netdoc_sdk.client import NetDocSyncClient
 from netdoc_sdk.exceptions import AuthenticationError, ValidationError
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
-from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory, NetDocAnsibleInventoryError
+from netdoc_collector.core.ansible_inventory import (
+    NetDocAnsibleInventory,
+    NetDocAnsibleInventoryError,
+)
 from netdoc_collector.core.scanner import NetworkScanner
 from netdoc_collector.core.tasks import (
     discovery_task,
@@ -96,7 +98,10 @@ def main() -> int:
 
     # Stand-alone mode
     parser.add_argument(
-        '-n', '--network', action='append', help='Networks to scan (CIDR, can be specified multiple times)'
+        '-n',
+        '--network',
+        action='append',
+        help='Networks to scan (CIDR, can be specified multiple times)',
     )
     parser.add_argument('-i', '--inventory', help='Override local inventory file')
     parser.add_argument('-p', '--password', default='secrets.yaml', help='Path to secrets.yaml')
@@ -214,14 +219,17 @@ def main() -> int:
                 return 5
             networks.append(network)
 
-        # Stand-alone mode (scan)
+        # Scan (stand-alone)
         scan_workers = num_workers * 10
         scanner = NetworkScanner(
-            ports=[22, 23, 80, 443],
-            timeout=0.5,
+            cancel_event=cancel_event,
+            cmd_timeout=cmd_timeout,
             concurrency=scan_workers,
             credentials=credentials,
             networks=networks,
+            ports=[22, 23, 80, 443],
+            report_path=report_path,
+            timeout=0.5,
         )
         logger.info('Starting scan with %d workers', scan_workers)
         hosts = list(scanner.scan())
@@ -233,11 +241,11 @@ def main() -> int:
         logger.info('Running in stand-alone mode (discovery)')
         try:
             logger.info('Loading inventory file: %s)', inventory_file)
-            with open(inventory_file, 'r') as fh:
+            with open(inventory_file) as fh:
                 inventory = json.load(fh)
         except FileNotFoundError:
             logger.warning('Inventory file not found: %s', inventory_file)
-            inventory = {"_meta": {"hostvars": {}},"all": {"hosts": []}}
+            inventory = {'_meta': {'hostvars': {}}, 'all': {'hosts': []}}
         except json.JSONDecodeError:
             logger.error('Invalid JSON file: %s', inventory_file)
             return 3
@@ -296,15 +304,22 @@ def main() -> int:
         networks = job.network_ranges
         excluded_addresses = job.known_ip_addresses
 
-        # Stand-alone mode (scan)
+        # Scan (managed)
         scan_workers = num_workers * 10
         scanner = NetworkScanner(
-            ports=[22, 23, 80, 443],
-            timeout=0.5,
+            cancel_event=cancel_event,
+            cmd_timeout=cmd_timeout,
             concurrency=scan_workers,
             credentials=credentials,
             networks=networks,
+            ports=[22, 23, 80, 443],
+            report_path=report_path,
+            timeout=0.5,
+            claim_token=claim_token,
+            client=client,
             excluded_addresses=excluded_addresses,
+            idempotency_key=idempotency_key,
+            job_id=job_id,
         )
         logger.info('Starting scan with %d workers', scan_workers)
         hosts = list(scanner.scan())
@@ -332,9 +347,7 @@ def main() -> int:
         logger.error('Invalid inventory: %s', inventory)
         return 12
 
-    # Run discovery tasks. This is the same discovery task/runner used by
-    # every mode (managed, scan-triggered, or file-based stand-alone): it
-    # processes every host currently present in the inventory it was given.
+    # Run discovery tasks (managed + stand-alone mode)
     logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
     results = nr.run(
         task=discovery_task,

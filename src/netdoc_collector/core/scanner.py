@@ -8,15 +8,20 @@ appropriate NetDoc plugin.
 import json
 import logging
 import socket
-from netdoc_sdk.client import NetDocSyncClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network
 from pathlib import Path
 from typing import Any
 
+from netdoc_sdk.client import NetDocSyncClient
 from netmiko.exceptions import NetmikoAuthenticationException
 from netmiko.ssh_autodetect import SSHDetect
+from nornir import InitNornir
+from nornir.core.plugins.inventory import InventoryPluginRegister
+
+from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
+from netdoc_collector.core.tasks import discovery_task
 
 logger = logging.getLogger('scanner')
 
@@ -75,21 +80,34 @@ class NetworkScanner:
 
     def __init__(
         self,
+        cancel_event,
+        cmd_timeout: int,
         concurrency: int,
         credentials: list[dict],
         networks: list[IPv4Network],
         ports: list[int],
+        report_path: Path,
         timeout: float,
-        client: NetDocSyncClient|None = None,
-        excluded_addresses: list[str] = list,
+        claim_token: str | None = None,
+        client: NetDocSyncClient | None = None,
+        excluded_addresses: list[str]|None = None,
+        idempotency_key: str | None = None,
+        job_id: str | None = None,
     ) -> None:
+        self.cancel_event = cancel_event
+        self.cmd_timeout = cmd_timeout
         self.concurrency = concurrency
         self.credentials = credentials
         self.networks = networks
         self.ports = ports
+        self.report_path = report_path
         self.timeout = timeout
+
+        self.claim_token = claim_token
         self.client = client
-        self.excluded_addresses = excluded_addresses
+        self.excluded_addresses = excluded_addresses or []
+        self.idempotency_key = idempotency_key
+        self.job_id = job_id
 
     def _check_port(self, ip: str, port: int) -> bool:
         """Return True when the TCP port is open on the given host."""
@@ -181,13 +199,43 @@ class NetworkScanner:
         normalized_type, netdoc_plugin = mapping
         logger.info('Host %s identified as %s', ip, netdoc_plugin)
 
-        return HostResult(
+        host_result = HostResult(
             ip=ip,
             port=22,
             netmiko_device_type=normalized_type,
             netdoc_plugin=netdoc_plugin,
             credential=matched_credential or {},
         )
+
+        # Run single discovery (num_worker=1)
+        inventory = self.build_inventory([host_result])
+        InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
+        nr = InitNornir(
+            runner={'plugin': 'threaded', 'options': {'num_workers': 1}},
+            inventory={
+                'plugin': 'NetDocAnsibleInventory',
+                'options': {'inventory': inventory},
+            },
+            logging={'enabled': False},
+        )
+        logger.info('Running collector on %s', ip)
+        results = nr.run(
+            task=discovery_task,
+            report_path=self.report_path,
+            cmd_timeout=self.cmd_timeout,
+            client=self.client,
+            job_id=self.job_id,
+            idempotency_key=self.idempotency_key,
+            claim_token=self.claim_token,
+            cancel_event=self.cancel_event,
+        )
+        failed = sum(1 for r in results.values() if r.failed)
+        if failed:
+            logger.info('Discovery failed on %s', ip)
+        else:
+            logger.info('Discovery completed on %s', ip)
+
+        return host_result
 
     def scan(self) -> list[HostResult]:
         """Scan all configured networks and return discovered hosts.
@@ -253,25 +301,56 @@ class NetworkScanner:
                 'ansible_user': host.credential.get('username'),
                 'netdoc_plugin': host.netdoc_plugin,
                 'netmiko_device_type': host.netmiko_device_type,
+                'netmiko_credential_id': host.credential.get('id'),
             }
             inventory['all']['hosts'].append(host.ip)
         return inventory
 
     @classmethod
     def complete(cls, hosts, inventory_file=None) -> None:
-        # TODO
-        """Save a host inventory file in standard Ansible JSON format.
+        """Complete a scan in both stand-alone and managed mode.
 
-        Kept for debugging/audit purposes only: discovery no longer needs to
-        read this file back, since scanned hosts are now fed directly into
-        the discovery run via build_inventory().
+        In stand-alonemode, inventory file is saved locally in standard Ansible JSON format.
+        If an inventory file already exists, the two files are merged.
+
+        In managed mode, data are uploaded to the backend.
 
         Args:
             hosts: discovered hosts to serialize.
-            path: path to the output JSON file.
+            inventory_file: path to the output JSON file (stand-alone mode).
         """
         inventory = cls.build_inventory(hosts)
         if inventory_file:
+            current_inventory = {}
+            try:
+                logger.info('Loading inventory file: %s)', inventory_file)
+                with open(inventory_file) as fh:
+                    current_inventory = json.load(fh)
+            except FileNotFoundError:
+                logger.info('Inventory file not found: %s', inventory_file)
+            except json.JSONDecodeError:
+                logger.warning('Invalid JSON file: %s', inventory_file)
+
+            if current_inventory:
+                logger.info('Merging scan results to %s', inventory_file)
+                # Merging groups
+                merged_inventory = current_inventory | inventory
+                # Merging hosts
+                merged_hosts = (
+                    current_inventory.get('_meta', {}).get('hostvars', {})
+                    | inventory['_meta']['hostvars']
+                )
+                merged_inventory['_meta']['hostvars'] = merged_hosts
+                # Updating all group
+                merged_inventory['all']['hosts'] = sorted(
+                    merged_inventory['_meta']['hostvars'].keys()
+                )
+                Path(inventory_file).write_text(
+                    json.dumps(merged_inventory, indent=4, sort_keys=True)
+                )
+                return
+
             logger.info('Writing scan results to %s', inventory_file)
             Path(inventory_file).write_text(json.dumps(inventory, indent=4, sort_keys=True))
             logger.info('Inventory saved to %s', inventory_file)
+            return
