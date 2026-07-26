@@ -207,33 +207,33 @@ class NetworkScanner:
             credential=matched_credential or {},
         )
 
-        # Run single discovery (num_worker=1)
-        inventory = self.build_inventory([host_result])
-        InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
-        nr = InitNornir(
-            runner={'plugin': 'threaded', 'options': {'num_workers': 1}},
-            inventory={
-                'plugin': 'NetDocAnsibleInventory',
-                'options': {'inventory': inventory},
-            },
-            logging={'enabled': False},
-        )
-        logger.info('Running collector on %s', ip)
-        results = nr.run(
-            task=discovery_task,
-            report_path=self.report_path,
-            cmd_timeout=self.cmd_timeout,
-            client=self.client,
-            job_id=self.job_id,
-            idempotency_key=self.idempotency_key,
-            claim_token=self.claim_token,
-            cancel_event=self.cancel_event,
-        )
-        failed = sum(1 for r in results.values() if r.failed)
-        if failed:
-            logger.info('Discovery failed on %s', ip)
-        else:
-            logger.info('Discovery completed on %s', ip)
+        if self.client:
+            # Run single discovery (num_worker=1)
+            inventory = self.build_inventory([host_result])
+            nr = InitNornir(
+                runner={'plugin': 'threaded', 'options': {'num_workers': 1}},
+                inventory={
+                    'plugin': 'NetDocAnsibleInventory',
+                    'options': {'inventory': inventory},
+                },
+                logging={'enabled': False},
+            )
+            logger.info('Running collector on %s', ip)
+            results = nr.run(
+                task=discovery_task,
+                report_path=self.report_path,
+                cmd_timeout=self.cmd_timeout,
+                client=self.client,
+                job_id=self.job_id,
+                idempotency_key=self.idempotency_key,
+                claim_token=self.claim_token,
+                cancel_event=self.cancel_event,
+            )
+            failed = sum(1 for r in results.values() if r.failed)
+            if failed:
+                logger.info('Discovery failed on %s', ip)
+            else:
+                logger.info('Discovery completed on %s', ip)
 
         return host_result
 
@@ -249,12 +249,18 @@ class NetworkScanner:
         Returns:
             List of HostResult for each discovered and identified host.
         """
-        all_ips = [str(ip) for network in self.networks for ip in network.hosts()]
-
+        all_ips = [
+            str(ip)
+            for network in self.networks
+            for ip in network.hosts()
+            if str(ip) not in self.excluded_addresses
+        ]
         total = len(all_ips)
         logger.info('Scanning %d hosts across %d network(s)', total, len(self.networks))
 
         results: list[HostResult] = []
+
+        InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
             futures = {executor.submit(self._scan_host, ip): ip for ip in all_ips}
@@ -299,9 +305,9 @@ class NetworkScanner:
                 'ansible_password': host.credential.get('password'),
                 'ansible_port': host.port,
                 'ansible_user': host.credential.get('username'),
+                'netdoc_credential_id': host.credential.get('id'),
                 'netdoc_plugin': host.netdoc_plugin,
                 'netmiko_device_type': host.netmiko_device_type,
-                'netmiko_credential_id': host.credential.get('id'),
             }
             inventory['all']['hosts'].append(host.ip)
         return inventory

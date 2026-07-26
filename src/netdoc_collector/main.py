@@ -3,16 +3,19 @@
 
 This module parses CLI arguments, loads configuration, initializes Nornir,
 executes discovery tasks, and optionally pushes the resulting data to the
-NetDoc backend in managed mode.
+NetDoc backend in managed mode. Collector can run either in stand-alone or
+managed mode.
 
-Scan and discovery are two distinct, sequential phases when running with
---scan in stand-alone mode: the scan phase must run to completion before the
-discovery phase starts on the resulting inventory. Because the two phases run
-as plain sequential code (no threads/futures are shared between them), the
-job is naturally closed only once BOTH phases have finished: the closing
-logic below (cleanup, background thread teardown, exit code) is only ever
-reached after nr.run() for discovery returns, which itself only happens
-after the scan phase has already completed.
+Stand-alone mode: Scan and discovery are two distinct, phases when running
+in stand-alone mode. The --network parameter force collector to scan networks
+and update (merge) the inventory file. Without the --network paramter the collector
+discovers the hosts included in the inventory file.
+
+Managed mode: Scan and discovery are sequential phases when running in
+stand-alone mode. The collector always discover hosts included in the inventory
+coming from the backend. If the backend return networks and credentials,
+the collector scan for new hosts. If identified, each identified host is later
+discovered.
 """
 
 import argparse
