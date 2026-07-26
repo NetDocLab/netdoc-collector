@@ -11,11 +11,15 @@ in stand-alone mode. The --network parameter force collector to scan networks
 and update (merge) the inventory file. Without the --network paramter the collector
 discovers the hosts included in the inventory file.
 
-Managed mode: Scan and discovery are sequential phases when running in
-stand-alone mode. The collector always discover hosts included in the inventory
-coming from the backend. If the backend return networks and credentials,
-the collector scan for new hosts. If identified, each identified host is later
-discovered.
+Managed mode: the static-inventory discovery (nr.run() on job.inventory) and
+the network scan phase (which, per host identified, triggers its own
+immediate discovery — see NetworkScanner._scan_host) run concurrently: the
+scan is kicked off on a background thread right away, and the static
+discovery run starts immediately afterwards on the main thread without
+waiting for the scan to finish. The job is only closed once BOTH phases
+have completed: main() always waits for the scan thread (via
+scan_future.result()) after the static-inventory nr.run() call returns,
+before computing final counters and closing the job.
 """
 
 import argparse
@@ -27,6 +31,7 @@ import os
 import signal
 import socket
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
@@ -41,7 +46,7 @@ from netdoc_collector.core.ansible_inventory import (
     NetDocAnsibleInventory,
     NetDocAnsibleInventoryError,
 )
-from netdoc_collector.core.scanner import NetworkScanner
+from netdoc_collector.core.scanner import HostResult, NetworkScanner
 from netdoc_collector.core.tasks import (
     discovery_task,
     mark_job_as_completed,
@@ -161,6 +166,13 @@ def main() -> int:
     # Shared stop event: any background task can set this to request a clean shutdown.
     stop_event = Event()
 
+    # Register the Ansible-style inventory plugin exactly once, before any
+    # Nornir instance is created anywhere (the main static-inventory run
+    # below, and the per-host runs NetworkScanner._scan_host triggers on its
+    # own background thread in managed mode). Centralizing this avoids two
+    # threads racing to register the same plugin name concurrently.
+    InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
+
     # Evaluate whether runtime should use managed or stand-alone mode.
     if backend_url and backend_token:
         job_log_collector = MainLogCollector()
@@ -203,6 +215,10 @@ def main() -> int:
 
     elif input_networks:
         # Running in stand-alone mode (scan).
+        #
+        # There is no static inventory to discover in parallel here (that is
+        # only a managed-mode concept, see below), so this path stays fully
+        # sequential: scan, then persist results, then exit.
         logger.info('Running in stand-alone mode (scan)')
 
         # Load credentials from secrets.yaml
@@ -235,7 +251,13 @@ def main() -> int:
             timeout=0.5,
         )
         logger.info('Starting scan with %d workers', scan_workers)
-        hosts = list(scanner.scan())
+        hosts = scanner.scan()
+        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        logger.info(
+            'Scan-triggered discovery completed on %d/%d host(s)',
+            scan_completed_hosts,
+            scan_completed_hosts + scan_failed_hosts,
+        )
         scanner.complete(hosts, inventory_file=inventory_file)
         return 0
 
@@ -256,6 +278,16 @@ def main() -> int:
     else:
         logger.error('At least inventory_file or backend_url + backend_token are required')
         return 4
+
+    # Managed-mode scan phase (background thread) and the resulting
+    # scan-triggered discovery stats. Stay at their defaults in every mode
+    # that does not run a concurrent scan (stand-alone discovery-only mode).
+    scan_executor: ThreadPoolExecutor | None = None
+    scan_future = None
+    scanner: NetworkScanner | None = None
+    scan_completed_hosts = 0
+    scan_failed_hosts = 0
+    scan_crashed = False
 
     if client:
         # Managed mode
@@ -279,6 +311,8 @@ def main() -> int:
                     )
                 except Exception:
                     logging.exception('Unexpected error closing job %s on signal', job_id)
+            if scan_executor is not None:
+                scan_executor.shutdown(wait=False, cancel_futures=True)
             _stop_background_threads(background_threads, stop_event)
             sys.exit(1)
 
@@ -304,10 +338,24 @@ def main() -> int:
 
         # Network scan parameters
         credentials = job.credentials
-        networks = job.network_ranges
+        input_networks = job.network_ranges
         excluded_addresses = job.known_ip_addresses
 
-        # Scan (managed)
+        # Validate networks to scan
+        networks = []
+        for input_network in input_networks:
+            try:
+                network = ipaddress.IPv4Network(input_network, strict=False)
+            except (ipaddress.NetmaskValueError, ValueError):
+                logger.error('Network %s is invalid', input_network)
+                return 5
+            networks.append(network)
+
+        # Scan (managed): kicked off on a background thread and NOT awaited
+        # here. The static-inventory discovery below (nr.run()) starts right
+        # after this, on the main thread, so the two phases run concurrently.
+        # We only ever wait for this future right before computing the job's
+        # final counters/status, further down.
         scan_workers = num_workers * 10
         scanner = NetworkScanner(
             cancel_event=cancel_event,
@@ -324,19 +372,20 @@ def main() -> int:
             idempotency_key=idempotency_key,
             job_id=job_id,
         )
-        logger.info('Starting scan with %d workers', scan_workers)
-        hosts = list(scanner.scan())
-        scanner.complete(hosts)
+        logger.info('Starting scan with %d workers in the background', scan_workers)
+        scan_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='scan')
+        scan_future = scan_executor.submit(scanner.scan)
 
     # Abort early if a heartbeat already failed during setup.
     if stop_event.is_set():
         logger.error('A background thread failed during setup; aborting.')
+        if scan_executor is not None:
+            scan_executor.shutdown(wait=False, cancel_futures=True)
         _stop_background_threads(background_threads, stop_event)
         return 9
 
     # Initialize Nornir for managed and stand-alone modes.
     logger.info('Initialising Nornir (num_workers=%d)', num_workers)
-    InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
     try:
         nr = InitNornir(
             runner={'plugin': 'threaded', 'options': {'num_workers': num_workers}},
@@ -348,9 +397,13 @@ def main() -> int:
         )
     except NetDocAnsibleInventoryError:
         logger.error('Invalid inventory: %s', inventory)
+        if scan_executor is not None:
+            scan_executor.shutdown(wait=False, cancel_futures=True)
         return 12
 
-    # Run discovery tasks (managed + stand-alone mode)
+    # Run discovery tasks on the static inventory (managed + stand-alone
+    # mode). In managed mode, this runs concurrently with the scan phase
+    # started above on its own thread — this call does not wait for it.
     logger.info('Running collector on %d device(s)', len(nr.inventory.hosts))
     results = nr.run(
         task=discovery_task,
@@ -362,24 +415,66 @@ def main() -> int:
         claim_token=claim_token,
         cancel_event=cancel_event,
     )
-    total_hosts = len(results.values())
-    failed_hosts = sum(1 for r in results.values() if r.failed)
-    completed_hosts = total_hosts - failed_hosts
-    logger.info('Discovery completed on %i/%i hosts', completed_hosts, total_hosts)
+    static_inventory_total = len(results.values())
+    static_inventory_failed = sum(1 for r in results.values() if r.failed)
+    static_inventory_completed = static_inventory_total - static_inventory_failed
+    logger.info(
+        'Static-inventory discovery completed on %i/%i hosts',
+        static_inventory_completed,
+        static_inventory_total,
+    )
 
-    # TODO: must do the following after scan and discovery has been completed
+    # Always wait for the scan phase to finish before proceeding to close
+    # the job — this is the point where "before exiting, always wait for
+    # the scanner" is enforced. By the time we get here the scan has
+    # typically already made significant progress (it started before
+    # nr.run() above), so this wait is usually short or immediate.
+    if scan_future is not None:
+        try:
+            hosts: list[HostResult] = scan_future.result()
+        except Exception:
+            logger.exception('Scan phase failed')
+            hosts = []
+            scan_crashed = True
+        finally:
+            scan_executor.shutdown(wait=True)
+
+        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        logger.info(
+            'Scan-triggered discovery completed on %d/%d host(s)',
+            scan_completed_hosts,
+            scan_completed_hosts + scan_failed_hosts,
+        )
+        scanner.complete(hosts)
+
+    # Combine the scan-triggered discovery phase (managed mode only) with
+    # the static-inventory discovery phase above before deciding on the
+    # job's final status and exit code. Logging for each phase stays
+    # separate (see above); only the totals used for closing the job are
+    # merged here.
+    total_hosts = static_inventory_total + scan_completed_hosts + scan_failed_hosts
+    completed_hosts = static_inventory_completed + scan_completed_hosts
+    failed_hosts = static_inventory_failed + scan_failed_hosts
+    logger.info('Discovery completed on %i/%i hosts overall', completed_hosts, total_hosts)
 
     # Clean older outputs.
     cleanup_old_snapshots(output_dir, retention)
 
     # Close the job in managed mode.
     if client and job_id and claim_token:
-        # Close the job
+        # Close the job.
         if cancel_event.is_set():
             final_status = 'canceled'
-        elif completed_hosts == 0:
+        elif scan_crashed or (total_hosts > 0 and completed_hosts == 0):
+            # Either the scan phase itself crashed (not just individual
+            # hosts failing discovery), or hosts were identified (from scan
+            # and/or static inventory) but every single one of them failed.
             final_status = 'failed'
         else:
+            # Either every host succeeded, some succeeded and some failed,
+            # or there was simply nothing to discover at all (total_hosts
+            # == 0) — both phases still ran to completion, so the job is
+            # considered completed rather than failed in that case.
             final_status = 'completed'
 
         job_logs = job_log_collector.drain() if job_log_collector else []
@@ -398,12 +493,12 @@ def main() -> int:
     if job_log_collector:
         logging.getLogger().removeHandler(job_log_collector)
 
-    # Cancel all background tasks before exiting cleanly.
-    # In every mode — including scan-triggered discovery — this line is only
-    # ever reached after BOTH the scan phase and the discovery phase have
-    # completed, since the two run sequentially above with no interleaving.
+    # Cancel all background tasks before exiting cleanly. This line is only
+    # ever reached after BOTH the static-inventory discovery (nr.run above)
+    # and the scan-triggered discovery phase (scan_future.result() above)
+    # have completed.
     _stop_background_threads(background_threads, stop_event)
-    return 2 if failed_hosts else 0
+    return 2 if failed_hosts or scan_crashed else 0
 
 
 def entrypoint() -> int:

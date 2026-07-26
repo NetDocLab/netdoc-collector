@@ -18,9 +18,7 @@ from netdoc_sdk.client import NetDocSyncClient
 from netmiko.exceptions import NetmikoAuthenticationException
 from netmiko.ssh_autodetect import SSHDetect
 from nornir import InitNornir
-from nornir.core.plugins.inventory import InventoryPluginRegister
 
-from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.tasks import discovery_task
 
 logger = logging.getLogger('scanner')
@@ -46,6 +44,7 @@ class HostResult:
     netmiko_device_type: str | None = None
     netdoc_plugin: str | None = None
     credential: dict[str, str] = field(default_factory=dict)
+    discovery_failed: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +89,7 @@ class NetworkScanner:
         timeout: float,
         claim_token: str | None = None,
         client: NetDocSyncClient | None = None,
-        excluded_addresses: list[str]|None = None,
+        excluded_addresses: list[str] | None = None,
         idempotency_key: str | None = None,
         job_id: str | None = None,
     ) -> None:
@@ -230,6 +229,7 @@ class NetworkScanner:
                 cancel_event=self.cancel_event,
             )
             failed = sum(1 for r in results.values() if r.failed)
+            host_result.discovery_failed = bool(failed)
             if failed:
                 logger.info('Discovery failed on %s', ip)
             else:
@@ -259,8 +259,6 @@ class NetworkScanner:
         logger.info('Scanning %d hosts across %d network(s)', total, len(self.networks))
 
         results: list[HostResult] = []
-
-        InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
             futures = {executor.submit(self._scan_host, ip): ip for ip in all_ips}
@@ -360,3 +358,23 @@ class NetworkScanner:
             Path(inventory_file).write_text(json.dumps(inventory, indent=4, sort_keys=True))
             logger.info('Inventory saved to %s', inventory_file)
             return
+
+    @staticmethod
+    def summarize_discovery(hosts: list[HostResult]) -> tuple[int, int]:
+        """Summarize the immediate managed-mode discovery outcome for scanned hosts.
+
+        Only meaningful when the scanner ran with a client (managed mode),
+        since that is the only case where _scan_host runs discovery
+        immediately for each identified host. Hosts with discovery_failed is
+        None (discovery not run, e.g. stand-alone scan) are excluded from
+        both counts.
+
+        Args:
+            hosts: hosts returned by scan().
+
+        Returns:
+            A (completed_count, failed_count) tuple.
+        """
+        completed = sum(1 for h in hosts if h.discovery_failed is False)
+        failed = sum(1 for h in hosts if h.discovery_failed is True)
+        return completed, failed
