@@ -10758,7 +10758,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "netdoc@0.3.0",
+      "bom-ref": "netdoc@0.4.0",
       "description": "Network Documentation Platform - Application",
       "externalReferences": [
         {
@@ -10775,10 +10775,10 @@
         }
       ],
       "type": "library",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
-      "bom-ref": "netdoc-sdk@0.6.9",
+      "bom-ref": "netdoc-sdk@0.7.0",
       "description": "Network Documentation Platform - SDK",
       "externalReferences": [
         {
@@ -10795,7 +10795,7 @@
         }
       ],
       "type": "library",
-      "version": "0.6.9"
+      "version": "0.7.0"
     },
     {
       "bom-ref": "netutils@1.17.2",
@@ -18117,8 +18117,8 @@
         "mkdocs@1.6.1",
         "mkdocstrings@1.0.4",
         "mypy@2.1.0",
-        "netdoc-sdk@0.6.9",
-        "netdoc@0.3.0",
+        "netdoc-sdk@0.7.0",
+        "netdoc@0.4.0",
         "pre-commit@4.5.1",
         "psycopg@3.3.4",
         "pydantic@2.13.4",
@@ -18137,7 +18137,7 @@
         "httpx@0.28.1",
         "pydantic@2.13.4"
       ],
-      "ref": "netdoc-sdk@0.6.9"
+      "ref": "netdoc-sdk@0.7.0"
     },
     {
       "dependsOn": [
@@ -18155,7 +18155,7 @@
         "redis@7.3.0",
         "whitenoise@6.12.0"
       ],
-      "ref": "netdoc@0.3.0"
+      "ref": "netdoc@0.4.0"
     },
     {
       "ref": "netutils@1.17.2"
@@ -18463,7 +18463,7 @@
       "name": "netdoc-collector",
       "type": "application"
     },
-    "timestamp": "2026-07-20T08:44:18.159520+00:00",
+    "timestamp": "2026-07-28T12:05:41.674985+00:00",
     "tools": {
       "components": [
         {
@@ -18567,7 +18567,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:986497c2-9b50-4fc9-8ec2-3c2c42d1b6b9",
+  "serialNumber": "urn:uuid:958a4e54-9fac-4313-9645-5853bca330ef",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
