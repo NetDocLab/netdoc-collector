@@ -1,6 +1,7 @@
 """Unit tests for NetworkScanner (managed)."""
 
 import ipaddress
+import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -91,7 +92,11 @@ class TestScanManaged:
         ]
         self.SNAPSHOT = snapshot
         self.JOB = job
-        self.CLAIM_TOKEN = job.claim_token
+        claim_token = uuid.uuid4()
+        job.claim_token = claim_token
+        job.save(update_fields=['claim_token'])
+        self.CLAIM_TOKEN = str(claim_token)
+        self.IDEMPOTENCY_KEY = job.idempotency_key
 
     @patch.object(NetworkScanner, '_check_port', return_value=False)
     def test_scan_unreachable_host(self, _mock_check_port, tmp_path):
@@ -107,6 +112,7 @@ class TestScanManaged:
             client=self.CLIENT,
             claim_token=self.CLAIM_TOKEN,
             job_id=str(self.JOB.id),
+            idempotency_key=str(self.IDEMPOTENCY_KEY),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -133,6 +139,7 @@ class TestScanManaged:
             client=self.CLIENT,
             claim_token=self.CLAIM_TOKEN,
             job_id=str(self.JOB.id),
+            idempotency_key=str(self.IDEMPOTENCY_KEY),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -163,6 +170,7 @@ class TestScanManaged:
             client=self.CLIENT,
             claim_token=self.CLAIM_TOKEN,
             job_id=str(self.JOB.id),
+            idempotency_key=str(self.IDEMPOTENCY_KEY),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -199,6 +207,7 @@ class TestScanManaged:
             client=self.CLIENT,
             claim_token=self.CLAIM_TOKEN,
             job_id=str(self.JOB.id),
+            idempotency_key=str(self.IDEMPOTENCY_KEY),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
