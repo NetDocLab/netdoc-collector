@@ -106,15 +106,18 @@ def cleanup_old_snapshots(output_dir, retention):
         output_dir (str | Path): base directory containing snapshot folders.
         retention (int): number of latest snapshots to keep.
     """
-    if output_dir and retention:
-        base = Path(output_dir)
-        snapshot_dirs = sorted(
-            [d for d in base.iterdir() if d.is_dir() and is_valid_report_dir(d.name)],
-            reverse=True,
-        )
-        for d in snapshot_dirs[retention:]:
-            logging.info('Deleted snapshot directory %s', d)
-            shutil.rmtree(d)
+    try:
+        if output_dir and retention:
+            base = Path(output_dir)
+            snapshot_dirs = sorted(
+                [d for d in base.iterdir() if d.is_dir() and is_valid_report_dir(d.name)],
+                reverse=True,
+            )
+            for d in snapshot_dirs[retention:]:
+                logging.info('Deleted snapshot directory %s', d)
+                shutil.rmtree(d)
+    except FileNotFoundError:
+        pass
 
 
 def load_config(path: str) -> dict:
