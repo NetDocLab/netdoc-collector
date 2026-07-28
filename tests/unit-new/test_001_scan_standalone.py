@@ -1,4 +1,4 @@
-"""Unit tests for NetworkScanner."""
+"""Unit tests for NetworkScanner (stand alone)."""
 
 import ipaddress
 import json
@@ -27,6 +27,7 @@ class TestScanStandalone:
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)
 
+        assert len(hosts) == 0
         assert scan_completed_hosts == 0
         assert scan_failed_hosts == 0
         assert inventory_file.exists()
@@ -54,6 +55,7 @@ class TestScanStandalone:
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)
 
+        assert len(hosts) == 0
         assert scan_completed_hosts == 0
         assert scan_failed_hosts == 0
         assert inventory_file.exists()
@@ -81,6 +83,7 @@ class TestScanStandalone:
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)
 
+        assert len(hosts) == 1
         assert scan_completed_hosts == 1
         assert scan_failed_hosts == 0
         assert inventory_file.exists()
