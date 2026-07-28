@@ -228,9 +228,11 @@ class NetworkScanner:
                 claim_token=self.claim_token,
                 cancel_event=self.cancel_event,
             )
-            failed = sum(1 for r in results.values() if r.failed)
-            host_result.discovery_failed = bool(failed)
-            if failed:
+            # Get first result from multiresult
+            _host, multi = next(iter(results.items()))
+            result = multi[0]
+            host_result.discovery_failed = result.failed
+            if result.failed:
                 logger.info('Discovery failed on %s', ip)
             else:
                 logger.info('Discovery completed on %s', ip)
