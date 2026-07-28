@@ -34,4 +34,4 @@ tests: ## Run tests (pytest only)
 update: ## Update poetry, SBOM, SDK
 	poetry add netdoc-sdk@latest
 	poetry lock
-	poetry run cyclonedx-py poetry --without dev -o sbom-cyclonedx.json
+	poetry run cyclonedx-py poetry --with main -o sbom-cyclonedx.json
