@@ -20,7 +20,7 @@ class TestScanStandalone:
             credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
         )
         hosts = scanner.scan()
@@ -48,7 +48,7 @@ class TestScanStandalone:
             credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
         )
         hosts = scanner.scan()
@@ -76,7 +76,7 @@ class TestScanStandalone:
             credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
         )
         hosts = scanner.scan()

@@ -4,8 +4,10 @@ import ipaddress
 from unittest.mock import MagicMock, patch
 
 import pytest
+from apps.core.context import set_current_tenant
 from apps.core.models import Tenant
-from apps.discovery.models import Collector, Credential
+from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
+from apps.discovery.services import DiscoveryRunService
 from apps.inventory.models import Site
 from conftest import _fake_discovery_result
 from django.contrib.auth import get_user_model
@@ -13,9 +15,7 @@ from netdoc_sdk.client import NetDocSyncClient
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from rest_framework.authtoken.models import Token
 
-from netdoc_collector.core.ansible_inventory import (
-    NetDocAnsibleInventory,
-)
+from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.scanner import NetworkScanner
 
 
@@ -26,14 +26,23 @@ class TestScanManaged:
     def setup(self, live_server):
         InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
+        admin_username = 'conftest-admin'
+        admin_password = 'af7fbd06acd9a4923f63edad362dc774'
         collector_username = 'conftest-collector'
         collector_password = '986629a7ca89202a3ef2ae1dd9d5fb37'
 
         # Create tenant
         tenant = Tenant.objects.create(name='conftest-tenant')
+        set_current_tenant(tenant)
 
         # Create collector user
         User = get_user_model()
+        admin_user = User.objects.create_user(
+            username=admin_username,
+            password=admin_password,
+            role='admin',
+            tenant=tenant,
+        )
         collector_user = User.objects.create_user(
             username=collector_username,
             password=collector_password,
@@ -50,11 +59,11 @@ class TestScanManaged:
         )
 
         # Create site
-        site = Site.objects.create(name='Conftest Site', is_default=True, tenant=tenant)
+        site = Site.objects.create(name='Conftest Site', is_default=True)
 
         # Create credential
         credential = Credential.objects.create(
-            label='Conftest Credential', username='admin', password='admin', tenant=tenant
+            label='Conftest Credential', username='admin', password='admin'
         )
 
         # Create and enable collector
@@ -63,27 +72,41 @@ class TestScanManaged:
             version='0.0.0',
             is_active=True,
             user=collector_user,
-            tenant=tenant,
         )
 
+        # Create run
+        run = DiscoveryRunService.create_run(requested_by=admin_user, tenant=tenant)
+        snapshot = run.snapshot
+        job = DiscoveryJob.objects.unfiltered().get(collector=collector, run=run)
+
         self.CLIENT = client
-        self.TENANT = tenant
         self.SITE = site
-        self.CREDENTIAL = credential
         self.COLLECTOR = collector
+        self.CREDENTIALS = [
+            {
+                'id': str(credential.id),
+                'username': credential.username,
+                'password': credential.password,
+            }
+        ]
+        self.SNAPSHOT = snapshot
+        self.JOB = job
+        self.CLAIM_TOKEN = job.claim_token
 
     @patch.object(NetworkScanner, '_check_port', return_value=False)
-    def test_scan_unreachable_host(self, _mock_check_port):
+    def test_scan_unreachable_host(self, _mock_check_port, tmp_path):
         scanner = NetworkScanner(
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
             cmd_timeout=60,
             concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
+            credentials=self.CREDENTIALS,
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
             client=self.CLIENT,
+            claim_token=self.CLAIM_TOKEN,
+            job_id=str(self.JOB.id),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -94,7 +117,7 @@ class TestScanManaged:
 
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_unsupported(self, _mock_check_port, mock_ssh_detect):
+    def test_scan_active_host_unsupported(self, _mock_check_port, mock_ssh_detect, tmp_path):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'fake_vendor'
 
@@ -102,12 +125,14 @@ class TestScanManaged:
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
             cmd_timeout=60,
             concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
+            credentials=self.CREDENTIALS,
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
             client=self.CLIENT,
+            claim_token=self.CLAIM_TOKEN,
+            job_id=str(self.JOB.id),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -119,7 +144,9 @@ class TestScanManaged:
     @patch('netdoc_collector.core.scanner.InitNornir')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_failed(self, _mock_check_port, mock_ssh_detect, mock_init_nornir):
+    def test_scan_active_host_failed(
+        self, _mock_check_port, mock_ssh_detect, mock_init_nornir, tmp_path
+    ):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
         fake_nr = MagicMock()
@@ -130,12 +157,14 @@ class TestScanManaged:
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
             cmd_timeout=60,
             concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
+            credentials=self.CREDENTIALS,
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
             client=self.CLIENT,
+            claim_token=self.CLAIM_TOKEN,
+            job_id=str(self.JOB.id),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -148,7 +177,9 @@ class TestScanManaged:
     @patch('netdoc_collector.core.scanner.InitNornir')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_discovery(self, _mock_check_port, mock_ssh_detect, mock_init_nornir):
+    def test_scan_active_host_discovery(
+        self, _mock_check_port, mock_ssh_detect, mock_init_nornir, tmp_path
+    ):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
         fake_nr = MagicMock()
@@ -159,17 +190,14 @@ class TestScanManaged:
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
             cmd_timeout=60,
             concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
+            credentials=self.CREDENTIALS,
             networks=[ipaddress.IPv4Network('10.0.0.1/32')],
             ports=[22],
-            report_path=None,
+            report_path=tmp_path,
             timeout=0.1,
-            # credentials: list[dict],
-            # report_path: Path,
-            # claim_token: str | None = None,
             client=self.CLIENT,
-            # idempotency_key: str | None = None,
-            # job_id: str | None = None,
+            claim_token=self.CLAIM_TOKEN,
+            job_id=str(self.JOB.id),
         )
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
@@ -178,3 +206,6 @@ class TestScanManaged:
         assert len(hosts) == 1
         assert scan_completed_hosts == 1
         assert scan_failed_hosts == 0
+
+        raw_outputs = RawOutput.objects.all()
+        assert len(raw_outputs) == 1
