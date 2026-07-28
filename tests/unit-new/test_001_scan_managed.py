@@ -8,8 +8,8 @@ from apps.core.context import set_current_tenant
 from apps.core.models import Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
-from apps.inventory.models import Site
-from conftest import _fake_discovery_result
+from apps.inventory.models import Device, Site
+from conftest import FailingVendorPlugin, FakeVendorPlugin
 from django.contrib.auth import get_user_model
 from netdoc_sdk.client import NetDocSyncClient
 from nornir.core.plugins.inventory import InventoryPluginRegister
@@ -141,17 +141,15 @@ class TestScanManaged:
         assert scan_completed_hosts == 0
         assert scan_failed_hosts == 0
 
-    @patch('netdoc_collector.core.scanner.InitNornir')
+    @patch('netdoc_collector.core.tasks.get_plugin')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
     def test_scan_active_host_failed(
-        self, _mock_check_port, mock_ssh_detect, mock_init_nornir, tmp_path
+        self, _mock_check_port, mock_ssh_detect, mock_get_plugin, tmp_path
     ):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
-        fake_nr = MagicMock()
-        fake_nr.run.return_value = _fake_discovery_result('10.0.0.1', failed=True)
-        mock_init_nornir.return_value = fake_nr
+        mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(**kwargs)
 
         scanner = NetworkScanner(
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
@@ -174,17 +172,20 @@ class TestScanManaged:
         assert scan_completed_hosts == 0
         assert scan_failed_hosts == 1
 
-    @patch('netdoc_collector.core.scanner.InitNornir')
+        raw_outputs = RawOutput.objects.all()
+        assert len(raw_outputs) == 0
+        devices = Device.objects.filter(snapshot=self.SNAPSHOT)
+        assert len(devices) == 0
+
+    @patch('netdoc_collector.core.tasks.get_plugin')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
     def test_scan_active_host_discovery(
-        self, _mock_check_port, mock_ssh_detect, mock_init_nornir, tmp_path
+        self, _mock_check_port, mock_ssh_detect, mock_get_plugin, tmp_path
     ):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
-        fake_nr = MagicMock()
-        fake_nr.run.return_value = _fake_discovery_result('10.0.0.1', failed=False)
-        mock_init_nornir.return_value = fake_nr
+        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
 
         scanner = NetworkScanner(
             cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
@@ -209,3 +210,5 @@ class TestScanManaged:
 
         raw_outputs = RawOutput.objects.all()
         assert len(raw_outputs) == 1
+        devices = Device.objects.filter(snapshot=self.SNAPSHOT)
+        assert len(devices) == 1
