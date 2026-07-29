@@ -1,3 +1,9 @@
+import ipaddress
+from unittest.mock import patch
+
+from netdoc_collector.core.scanner import HostResult, NetworkScanner
+
+
 class TestScan:
     def test_scan_aggregates_results_and_survives_exceptions(self, scanner):
         scanner.networks = [ipaddress.IPv4Network('10.0.0.0/30')]  # 2 usable hosts

@@ -1,6 +1,10 @@
+import ipaddress
 from unittest.mock import MagicMock
 
+import pytest
 from nornir.core.task import AggregatedResult, MultiResult, Result
+
+from netdoc_collector.core.scanner import NetworkScanner
 
 RAW_SHOW_VERSION = """
 Cisco IOS Software, Catalyst 4500 L3 Switch Software (cat4500e-ENTSERVICESK9-M), Version 12.2(54)SG1, RELEASE SOFTWARE (fc1)
@@ -767,3 +771,21 @@ class FailingVendorPlugin(FakeVendorPlugin):
 
     def collect(self, task) -> dict:
         raise RuntimeError('simulated device failure')
+
+
+@pytest.fixture
+def scanner():
+    return NetworkScanner(
+        cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
+        cmd_timeout=60,
+        concurrency=5,
+        credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
+        networks=[ipaddress.IPv4Network('10.0.0.1/32')],
+        ports=[22],
+        report_path=None,
+        timeout=0.1,
+        client=None,
+        claim_token=None,
+        job_id=None,
+        idempotency_key=None,
+    )

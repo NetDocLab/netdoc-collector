@@ -1,8 +1,7 @@
 """Unit tests for NetworkScanner (stand alone)."""
 
-import ipaddress
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from netdoc_collector.core.scanner import NetworkScanner
 
@@ -11,18 +10,9 @@ class TestScanStandalone:
     """Stand alone scan stops after platform detection."""
 
     @patch.object(NetworkScanner, '_check_port', return_value=False)
-    def test_scan_unreachable_host(self, _mock_check_port, tmp_path):
+    def test_scan_unreachable_host(self, _mock_check_port, scanner, tmp_path):
         inventory_file = tmp_path / 'inventory.json'
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-        )
+        scanner.report_path = tmp_path
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)
@@ -36,21 +26,14 @@ class TestScanStandalone:
 
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_unsupported(self, _mock_check_port, mock_ssh_detect, tmp_path):
+    def test_scan_active_host_unsupported(
+        self, _mock_check_port, mock_ssh_detect, scanner, tmp_path
+    ):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'fake_vendor'
 
         inventory_file = tmp_path / 'inventory.json'
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-        )
+        scanner.report_path = tmp_path
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)
@@ -64,21 +47,12 @@ class TestScanStandalone:
 
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_supported(self, _mock_check_port, mock_ssh_detect, tmp_path):
+    def test_scan_active_host_supported(self, _mock_check_port, mock_ssh_detect, scanner, tmp_path):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
 
         inventory_file = tmp_path / 'inventory.json'
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=[{'label': 'default', 'username': 'admin', 'password': 'admin'}],
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-        )
+        scanner.report_path = tmp_path
         hosts = scanner.scan()
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         scanner.complete(hosts, inventory_file=inventory_file)

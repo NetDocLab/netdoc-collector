@@ -1,8 +1,7 @@
 """Unit tests for NetworkScanner (managed)."""
 
-import ipaddress
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from apps.core.context import set_current_tenant
@@ -24,7 +23,7 @@ class TestScanManaged:
     """Managed scan upload data to the backend."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, live_server):
+    def setup(self, live_server, scanner, tmp_path):
         InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
         admin_username = 'conftest-admin'
@@ -80,10 +79,7 @@ class TestScanManaged:
         snapshot = run.snapshot
         job = DiscoveryJob.objects.unfiltered().get(collector=collector, run=run)
 
-        self.CLIENT = client
-        self.SITE = site
-        self.COLLECTOR = collector
-        self.CREDENTIALS = [
+        crendetials = [
             {
                 'id': str(credential.id),
                 'username': credential.username,
@@ -91,31 +87,23 @@ class TestScanManaged:
             }
         ]
         self.SNAPSHOT = snapshot
-        self.JOB = job
         claim_token = uuid.uuid4()
         job.claim_token = claim_token
         job.save(update_fields=['claim_token'])
-        self.CLAIM_TOKEN = str(claim_token)
-        self.IDEMPOTENCY_KEY = job.idempotency_key
+
+        scanner.credentials = crendetials
+        scanner.report_path = tmp_path
+        scanner.client = client
+        scanner.claim_token = str(claim_token)
+        scanner.job_id = str(job.id)
+        scanner.idempotency_key = str(job.idempotency_key)
+        self.SCANNER = scanner
 
     @patch.object(NetworkScanner, '_check_port', return_value=False)
-    def test_scan_unreachable_host(self, _mock_check_port, tmp_path):
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=self.CREDENTIALS,
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-            client=self.CLIENT,
-            claim_token=self.CLAIM_TOKEN,
-            job_id=str(self.JOB.id),
-            idempotency_key=str(self.IDEMPOTENCY_KEY),
-        )
+    def test_scan_unreachable_host(self, _mock_check_port):
+        scanner = self.SCANNER
         hosts = scanner.scan()
-        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        scan_completed_hosts, scan_failed_hosts = scanner.summarize_discovery(hosts)
 
         assert len(hosts) == 0
         assert scan_completed_hosts == 0
@@ -123,26 +111,13 @@ class TestScanManaged:
 
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_unsupported(self, _mock_check_port, mock_ssh_detect, tmp_path):
+    def test_scan_active_host_unsupported(self, _mock_check_port, mock_ssh_detect):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'fake_vendor'
 
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=self.CREDENTIALS,
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-            client=self.CLIENT,
-            claim_token=self.CLAIM_TOKEN,
-            job_id=str(self.JOB.id),
-            idempotency_key=str(self.IDEMPOTENCY_KEY),
-        )
+        scanner = self.SCANNER
         hosts = scanner.scan()
-        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        scan_completed_hosts, scan_failed_hosts = scanner.summarize_discovery(hosts)
 
         assert len(hosts) == 0
         assert scan_completed_hosts == 0
@@ -151,29 +126,14 @@ class TestScanManaged:
     @patch('netdoc_collector.core.tasks.get_plugin')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_failed(
-        self, _mock_check_port, mock_ssh_detect, mock_get_plugin, tmp_path
-    ):
+    def test_scan_active_host_failed(self, _mock_check_port, mock_ssh_detect, mock_get_plugin):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
         mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(**kwargs)
 
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=self.CREDENTIALS,
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-            client=self.CLIENT,
-            claim_token=self.CLAIM_TOKEN,
-            job_id=str(self.JOB.id),
-            idempotency_key=str(self.IDEMPOTENCY_KEY),
-        )
+        scanner = self.SCANNER
         hosts = scanner.scan()
-        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        scan_completed_hosts, scan_failed_hosts = scanner.summarize_discovery(hosts)
         scanner.complete(hosts)
 
         assert len(hosts) == 1
@@ -188,29 +148,14 @@ class TestScanManaged:
     @patch('netdoc_collector.core.tasks.get_plugin')
     @patch('netdoc_collector.core.scanner.SSHDetect')
     @patch.object(NetworkScanner, '_check_port', return_value=True)
-    def test_scan_active_host_discovery(
-        self, _mock_check_port, mock_ssh_detect, mock_get_plugin, tmp_path
-    ):
+    def test_scan_active_host_discovery(self, _mock_check_port, mock_ssh_detect, mock_get_plugin):
         # Mock result
         mock_ssh_detect.return_value.autodetect.return_value = 'cisco_ios'
         mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
 
-        scanner = NetworkScanner(
-            cancel_event=MagicMock(is_set=MagicMock(return_value=False)),
-            cmd_timeout=60,
-            concurrency=5,
-            credentials=self.CREDENTIALS,
-            networks=[ipaddress.IPv4Network('10.0.0.1/32')],
-            ports=[22],
-            report_path=tmp_path,
-            timeout=0.1,
-            client=self.CLIENT,
-            claim_token=self.CLAIM_TOKEN,
-            job_id=str(self.JOB.id),
-            idempotency_key=str(self.IDEMPOTENCY_KEY),
-        )
+        scanner = self.SCANNER
         hosts = scanner.scan()
-        scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
+        scan_completed_hosts, scan_failed_hosts = scanner.summarize_discovery(hosts)
         scanner.complete(hosts)
 
         assert len(hosts) == 1
