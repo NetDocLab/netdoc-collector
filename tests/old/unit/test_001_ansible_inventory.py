@@ -43,26 +43,6 @@ SAMPLE_INVENTORY: dict = {
     },
 }
 
-
-@pytest.fixture
-def inventory_json_file(tmp_path) -> str:
-    """Write SAMPLE_INVENTORY to a non-executable JSON file and return the path."""
-    path = tmp_path / 'inventory.json'
-    path.write_text(json.dumps(SAMPLE_INVENTORY))
-    # Ensure the file is NOT executable
-    path.chmod(stat.S_IRUSR | stat.S_IWUSR)
-    return str(path)
-
-
-@pytest.fixture
-def inventory_executable_file(tmp_path) -> str:
-    """Write SAMPLE_INVENTORY to an executable file and return the path."""
-    path = tmp_path / 'inventory_exec.json'
-    path.write_text(json.dumps(SAMPLE_INVENTORY))
-    path.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-    return str(path)
-
-
 class TestInitFromDict:
     def test_accepts_dict(self):
         inv = NetDocAnsibleInventory(SAMPLE_INVENTORY)
