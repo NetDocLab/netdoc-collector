@@ -750,18 +750,16 @@ class FakeVendorPlugin:
         self.host_name = host_name
 
     def collect(self, task) -> dict:
-        return (
-            {
-                'raw_outputs': {
-                    'show version': RAW_SHOW_VERSION,
-                    'show interfaces': RAW_SHOW_INTERFACES,
-                },
-                'parsed_outputs': {
-                    'show version': PARSED_SHOW_VERSION,
-                    'show interfaces': PARSED_SHOW_INTERFACES,
-                },
+        return {
+            'raw_outputs': {
+                'show version': RAW_SHOW_VERSION,
+                'show interfaces': RAW_SHOW_INTERFACES,
             },
-        )
+            'parsed_outputs': {
+                'show version': PARSED_SHOW_VERSION,
+                'show interfaces': PARSED_SHOW_INTERFACES,
+            },
+        }
 
 
 class FailingVendorPlugin(FakeVendorPlugin):

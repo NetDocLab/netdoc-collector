@@ -195,15 +195,24 @@ def _push_discovered_device(
             being cancelled.
     """
     try:
+        payload = {
+            'idempotency_key': idempotency_key,
+            'raw_payload': None if result.failed else result.result,
+            'logs': [format_log_record(r) for r in task_logs],
+            'idempotency_key': idempotency_key,
+        }
+        if host.data.get('netdoc_id'):
+            # Discovery an existent device
+            payload['canonical_device'] = host.data.get('netdoc_id')
+        else:
+            # Discovery a new device (scan)
+            payload['discovery_mode'] = host.data.get('netdoc_plugin')
+            payload['discovery_address'] = host.data.get('ansible_host')
+            payload['credential'] = host.data.get('netdoc_credential_id')
         response = client.discovery_jobs_push_discovered_device(
             id=job_id,
             claim_token=claim_token,
-            data={
-                'canonical_device': host.data.get('netdoc_id'),
-                'idempotency_key': idempotency_key,
-                'raw_payload': None if result.failed else result.result,
-                'logs': [format_log_record(r) for r in task_logs],
-            },
+            data=payload,
         )
         logging.info("Push completed for host '%s'", host.name)
 
