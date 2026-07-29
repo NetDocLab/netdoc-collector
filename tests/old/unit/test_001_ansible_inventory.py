@@ -43,6 +43,7 @@ SAMPLE_INVENTORY: dict = {
     },
 }
 
+
 class TestInitFromDict:
     def test_accepts_dict(self):
         inv = NetDocAnsibleInventory(SAMPLE_INVENTORY)

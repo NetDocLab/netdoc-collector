@@ -112,7 +112,7 @@ def main() -> int:
         help='Networks to scan (CIDR, can be specified multiple times)',
     )
     parser.add_argument('-i', '--inventory', help='Override local inventory file')
-    parser.add_argument('-p', '--password', default='secrets.yaml', help='Path to secrets.yaml')
+    parser.add_argument('-s', '--secrets', default='secrets.yaml', help='Path to secrets.yaml')
 
     # Managed mode
     parser.add_argument('-T', '--timeout', help='Override backend timeout', type=int)
@@ -222,10 +222,10 @@ def main() -> int:
         logger.info('Running in stand-alone mode (scan)')
 
         # Load credentials from secrets.yaml
-        secrets = load_config(args.password)
+        secrets = load_config(args.secrets)
         credentials = secrets.get('credentials', {})
         if not credentials:
-            logger.error('No credentials found in %s', args.password)
+            logger.error('No credentials found in %s', args.secrets)
             return 6
 
         # Validate networks to scan

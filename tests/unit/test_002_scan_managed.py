@@ -59,7 +59,7 @@ class TestScanManaged:
         )
 
         # Create site
-        site = Site.objects.create(name='Conftest Site', is_default=True)
+        Site.objects.create(name='Conftest Site', is_default=True)
 
         # Create credential
         credential = Credential.objects.create(

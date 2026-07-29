@@ -4,9 +4,8 @@ from pathlib import Path
 from netdoc_collector.core.utils import (
     REPORT_PATH_FMT,
     cleanup_old_snapshots,
-    is_valid_report_dir,
-    load_config,
 )
+
 
 class TestMain:
     def test_cleanup_old_snapshots_keeps_most_recent(self, tmp_path: Path):

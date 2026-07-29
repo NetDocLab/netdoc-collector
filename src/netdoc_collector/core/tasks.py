@@ -196,7 +196,6 @@ def _push_discovered_device(
     """
     try:
         payload = {
-            'idempotency_key': idempotency_key,
             'raw_payload': None if result.failed else result.result,
             'logs': [format_log_record(r) for r in task_logs],
             'idempotency_key': idempotency_key,

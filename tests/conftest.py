@@ -1,7 +1,12 @@
 import ipaddress
+import json
+import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import yaml
 from nornir.core.task import AggregatedResult, MultiResult, Result
 
 from netdoc_collector.core.scanner import NetworkScanner
@@ -735,6 +740,68 @@ def _fake_discovery_result(host_name: str, failed: bool = False) -> AggregatedRe
     )
     agg[host_name] = multi
     return agg
+
+
+def _run(workdir: Path, options=None) -> subprocess.CompletedProcess:
+    if not options:
+        options = []
+    parameters = [
+        sys.executable,
+        '-m',
+        'netdoc_collector',
+        '-n',
+        '10.0.0.1/32',
+        '-s',
+        str(workdir / 'secrets.yaml'),
+        '-i',
+        str(workdir / 'inventory.json'),
+        *options,
+    ]
+    return subprocess.run(
+        parameters,
+        capture_output=True,
+        text=True,
+        timeout=180,
+        cwd=str(workdir),
+    )
+
+
+def _workdir(tmp_path, dump_config=True, dump_secrets=True, dump_inventory=True):
+    config = {
+        'cmd_timeout': 10,
+        'output': './output',
+        'retention': 2,
+        'workers': 2,
+        'inventory': './inventory.json',
+        'backend': {
+            'url': 'http://localhost:8000/',
+            'verify': False,
+            'timeout': 120,
+            'token': None,
+        },
+    }
+    secrets = {'credentials': {'label': 'default', 'username': 'admin', 'password': 'admin'}}
+    inventory = {
+        '_meta': {
+            'hostvars': {
+                '10.0.0.1': {
+                    'ansible_host': '10.0.0.1',
+                    'ansible_password': 'admin',
+                    'ansible_port': 22,
+                    'ansible_user': 'admin',
+                    'netdoc_plugin': 'netmiko:cisco:ios:ssh',
+                    'netmiko_device_type': 'cisco_ios',
+                }
+            }
+        },
+        'all': {'hosts': ['10.0.0.1']},
+    }
+    if dump_config:
+        (tmp_path / 'config.yaml').write_text(yaml.dump(config))
+    if dump_secrets:
+        (tmp_path / 'secrets.yaml').write_text(yaml.dump(secrets))
+    if dump_inventory:
+        (tmp_path / 'inventory.json').write_text(json.dumps(inventory))
 
 
 class FakeVendorPlugin:
