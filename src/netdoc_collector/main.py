@@ -46,7 +46,7 @@ from netdoc_collector.core.ansible_inventory import (
     NetDocAnsibleInventory,
     NetDocAnsibleInventoryError,
 )
-from netdoc_collector.core.scanner import HostResult, NetworkScanner
+from netdoc_collector.core.scanner import NetworkScanner
 from netdoc_collector.core.tasks import (
     discovery_task,
     mark_job_as_completed,
@@ -173,6 +173,16 @@ def main() -> int:
     # threads racing to register the same plugin name concurrently.
     InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
+    # Managed-mode scan phase (background thread) and the resulting
+    # scan-triggered discovery stats. Stay at their defaults in every mode
+    # that does not run a concurrent scan (stand-alone discovery-only mode).
+    scan_executor: ThreadPoolExecutor | None = None
+    scan_future = None
+    scanner: NetworkScanner | None = None
+    scan_completed_hosts = 0
+    scan_failed_hosts = 0
+    scan_crashed = False
+
     # Evaluate whether runtime should use managed or stand-alone mode.
     if backend_url and backend_token:
         job_log_collector = MainLogCollector()
@@ -278,16 +288,6 @@ def main() -> int:
     else:
         logger.error('At least inventory_file or backend_url + backend_token are required')
         return 4
-
-    # Managed-mode scan phase (background thread) and the resulting
-    # scan-triggered discovery stats. Stay at their defaults in every mode
-    # that does not run a concurrent scan (stand-alone discovery-only mode).
-    scan_executor: ThreadPoolExecutor | None = None
-    scan_future = None
-    scanner: NetworkScanner | None = None
-    scan_completed_hosts = 0
-    scan_failed_hosts = 0
-    scan_crashed = False
 
     if client:
         # Managed mode
@@ -429,15 +429,16 @@ def main() -> int:
     # the scanner" is enforced. By the time we get here the scan has
     # typically already made significant progress (it started before
     # nr.run() above), so this wait is usually short or immediate.
-    if scan_future is not None:
+    if scan_future is not None and scanner is not None:
         try:
-            hosts: list[HostResult] = scan_future.result()
+            hosts = scan_future.result()
         except Exception:
             logger.exception('Scan phase failed')
             hosts = []
             scan_crashed = True
         finally:
-            scan_executor.shutdown(wait=True)
+            if scan_executor:
+                scan_executor.shutdown(wait=True)
 
         scan_completed_hosts, scan_failed_hosts = NetworkScanner.summarize_discovery(hosts)
         logger.info(
