@@ -78,6 +78,10 @@ class TestScanManaged:
         run = DiscoveryRunService.create_run(requested_by=admin_user, tenant=tenant)
         snapshot = run.snapshot
         job = DiscoveryJob.objects.unfiltered().get(collector=collector, run=run)
+        self.SNAPSHOT = snapshot
+        claim_token = uuid.uuid4()
+        job.claim_token = claim_token
+        job.save(update_fields=['claim_token'])
 
         crendetials = [
             {
@@ -86,11 +90,6 @@ class TestScanManaged:
                 'password': credential.password,
             }
         ]
-        self.SNAPSHOT = snapshot
-        claim_token = uuid.uuid4()
-        job.claim_token = claim_token
-        job.save(update_fields=['claim_token'])
-
         scanner.credentials = crendetials
         scanner.report_path = tmp_path
         scanner.client = client
