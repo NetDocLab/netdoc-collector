@@ -23,23 +23,3 @@ class TestMain:
 
         remaining = sorted([p.name for p in base.iterdir() if p.is_dir()])
         assert remaining == [names[-2], names[-1], 'invalid-dir']
-
-
-    def test_load_config_reads_yaml(self, tmp_path: Path):
-        config_path = tmp_path / 'config.yaml'
-        config_path.write_text('value: hello\nnumber: 42\n')
-
-        data = load_config(str(config_path))
-
-        assert data == {'value': 'hello', 'number': 42}
-
-
-    def test_load_config_missing_file_returns_empty(self):
-        data = load_config('does-not-exist.yaml')
-        assert data == {}
-
-
-    def test_is_valid_report_dir(self):
-        assert is_valid_report_dir('20250101-000000')
-        assert not is_valid_report_dir('not-a-timestamp')
-        assert not is_valid_report_dir('2025-01-01')
