@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "netdoc-sdk (>=0.6.9,<0.7.0)",
+    "netdoc-sdk (>=0.7.0,<0.8.0)",
     "netmiko==4.6.0",
     "nornir==3.5.0",
     "nornir-netmiko==1.0.1",
@@ -82,6 +82,7 @@ pydantic = {extras = ["email"], version = "^2.13.4"}
 pytest-django = "^4.12.0"
 
 # Code quality
+cyclonedx-bom = "^7.3.0"
 mypy = ">=1.7"
 ruff = ">=0.1"
 

@@ -78,4 +78,6 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             logging.error('Stopping collection on %s due to error', self.host_name)
 
         # Return raw_payload
+        if not raw_payload:
+            raise RuntimeError(f'No data collected for host {host.name}')
         return {'raw_outputs': raw_payload, 'parsed_outputs': parsed_payload}
