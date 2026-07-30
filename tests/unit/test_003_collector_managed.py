@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from apps.core.context import set_current_tenant
-from apps.core.models import Tenant
+from apps.core.models import LogRecord, Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
 from apps.inventory.models import CanonicalDevice, Device, Site
@@ -135,3 +135,51 @@ class TestCollectorManaged:
         assert len(raw_outputs) == 1
         devices = Device.objects.filter(snapshot=self.SNAPSHOT)
         assert len(devices) == 1
+        logs = LogRecord.objects.all()
+        assert len(logs) > 10
+
+    # @patch('netdoc_collector.core.tasks.get_plugin')
+    # def test_collector_fail(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
+    #     caplog.set_level(logging.INFO)
+    #     _workdir(tmp_path, dump_config=False, dump_inventory=False, dump_secrets=False)
+    #     report_path = tmp_path / 'output' / '20260729-135328'
+
+    #     # Mock result
+    #     mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(
+    #         **{**kwargs, 'report_path': report_path}
+    #     )
+
+    #     monkeypatch.chdir(tmp_path)
+    #     with patch(
+    #         'sys.argv',
+    #         [
+    #             'collector',
+    #             '-o',
+    #             str(report_path),
+    #             '-u',
+    #             self.URL,
+    #             '--token',
+    #             self.TOKEN,
+    #         ],
+    #     ):
+    #         result = netdoc_collector_main()
+    #     # Check result
+    #     assert result == 0, caplog.text
+
+    #     # Check inventory
+    #     assert not os.path.isfile(tmp_path / 'inventory.json')
+
+    #     # Check output
+    #     assert os.path.isdir(tmp_path / 'output')
+    #     directories = [p for p in (tmp_path / 'output').iterdir() if p.is_dir()]
+    #     assert len(directories) == 1
+    #     assert os.path.isdir(directories[0] / 'router1.example.com')
+    #     assert os.path.isfile(directories[0] / 'router1.example.com' / 'show-version.raw')
+
+    #     # Check database
+    #     raw_outputs = RawOutput.objects.all()
+    #     assert len(raw_outputs) == 0
+    #     devices = Device.objects.filter(snapshot=self.SNAPSHOT)
+    #     assert len(devices) == 0
+    # logs = LogRecord.objects.all()
+    # assert len(logs) > 10
