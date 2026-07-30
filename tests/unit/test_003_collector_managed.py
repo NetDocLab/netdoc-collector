@@ -1,5 +1,6 @@
 """Unit tests for NetworkScanner (stand alone)."""
 
+import logging
 import os
 import uuid
 from unittest.mock import patch
@@ -10,14 +11,16 @@ from apps.core.models import Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
 from apps.inventory.models import CanonicalDevice, Device, Site
-from conftest import FakeVendorPlugin, _run
+from conftest import FakeVendorPlugin, _workdir
 from django.contrib.auth import get_user_model
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from rest_framework.authtoken.models import Token
 
 from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
+from netdoc_collector.main import main as netdoc_collector_main
 
 
+@pytest.mark.django_db(databases=['default', 'logs'])
 class TestCollectorManaged:
     """Managed collector."""
 
@@ -90,14 +93,32 @@ class TestCollectorManaged:
         self.URL = live_server.url
 
     @patch('netdoc_collector.core.tasks.get_plugin')
-    def test_collector(self, mock_get_plugin, tmp_path):
+    def test_collector(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
+        caplog.set_level(logging.INFO)
+        _workdir(tmp_path, dump_config=False, dump_inventory=False, dump_secrets=False)
+        report_path = tmp_path / 'output' / '20260729-135328'
+
         # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
+        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(
+            **{**kwargs, 'report_path': report_path}
+        )
 
-        result = _run(tmp_path, options=['-u', self.URL, '--token', self.TOKEN])
-
+        monkeypatch.chdir(tmp_path)
+        with patch(
+            'sys.argv',
+            [
+                'collector',
+                '-o',
+                str(report_path),
+                '-u',
+                self.URL,
+                '--token',
+                self.TOKEN,
+            ],
+        ):
+            result = netdoc_collector_main()
         # Check result
-        assert result.returncode == 0, result.stderr
+        assert result == 0, caplog.text
 
         # Check inventory
         assert not os.path.isfile(tmp_path / 'inventory.json')
@@ -107,6 +128,7 @@ class TestCollectorManaged:
         directories = [p for p in (tmp_path / 'output').iterdir() if p.is_dir()]
         assert len(directories) == 1
         assert os.path.isdir(directories[0] / 'router1.example.com')
+        assert os.path.isfile(directories[0] / 'router1.example.com' / 'show-version.raw')
 
         # Check database
         raw_outputs = RawOutput.objects.all()

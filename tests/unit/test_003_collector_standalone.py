@@ -15,7 +15,7 @@ class TestCollectorStandalone:
 
     @patch('netdoc_collector.core.tasks.get_plugin')
     def test_collector(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.INFO)
         _workdir(tmp_path)
         report_path = tmp_path / 'output' / '20260729-135328'
 

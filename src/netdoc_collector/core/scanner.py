@@ -359,7 +359,7 @@ class NetworkScanner:
             logger.info('Writing scan results to %s', inventory_file)
             Path(inventory_file).write_text(json.dumps(inventory, indent=4, sort_keys=True))
             logger.info('Inventory saved to %s', inventory_file)
-            return
+        return
 
     @staticmethod
     def summarize_discovery(hosts: list[HostResult]) -> tuple[int, int]:
