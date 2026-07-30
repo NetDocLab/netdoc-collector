@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.6...v0.7.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* fix device import from scan ([dae5529](https://github.com/NetDocLab/netdoc-collector/commit/dae55297ef19a843b25abea7a21dc28d5198ccd3))
+* fix doc. stand-alone scan ([26a35f5](https://github.com/NetDocLab/netdoc-collector/commit/26a35f503ba3cbc1af7655fd9b4285fa32eed7b6))
+* fix scan/collect parallelism ([51d86d5](https://github.com/NetDocLab/netdoc-collector/commit/51d86d59cc12f7aa09a93405e41c8522ad69177c))
+* improve raw_payload detection ([9866474](https://github.com/NetDocLab/netdoc-collector/commit/98664740d6d0983034427d179358b7abb65e02ab))
+* improve result after scan ([0797e57](https://github.com/NetDocLab/netdoc-collector/commit/0797e5775c8ee674cd292eba5dff9e07967987d6))
+* linting ([4e4d356](https://github.com/NetDocLab/netdoc-collector/commit/4e4d356c23e392ffd4fa17cf70f7a464e038ba39))
+* linting ([fdd7845](https://github.com/NetDocLab/netdoc-collector/commit/fdd78451746892acaf337d3dcc044fedb1f8fc70))
+* linting ([2e60fc3](https://github.com/NetDocLab/netdoc-collector/commit/2e60fc3bb81b15e9957c1d39e4ce5643db9a8cdd))
+* pass if output dir does not exist ([3e7401a](https://github.com/NetDocLab/netdoc-collector/commit/3e7401acb2ec4a1b24430821cfe340aa4871b235))
+* update makefile ([94ee78a](https://github.com/NetDocLab/netdoc-collector/commit/94ee78aa119df84afc486e676aa888d9a1f9c383))
+* update poetry lock ([534a773](https://github.com/NetDocLab/netdoc-collector/commit/534a7736a79ac34085fef3caf1b5210c49a5bad4))
+* update sbom ([1f9ec89](https://github.com/NetDocLab/netdoc-collector/commit/1f9ec8934c24e7707c771a16f1fe8af099bef40c))
+
 ## [0.6.6](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.5...v0.6.6) (2026-07-19)
 
 
