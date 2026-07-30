@@ -1,8 +1,5 @@
 import ipaddress
 import json
-import subprocess
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,6 +7,7 @@ import yaml
 from nornir.core.task import AggregatedResult, MultiResult, Result
 
 from netdoc_collector.core.scanner import NetworkScanner
+from netdoc_collector.plugins.base import BasePlugin
 
 RAW_SHOW_VERSION = """
 Cisco IOS Software, Catalyst 4500 L3 Switch Software (cat4500e-ENTSERVICESK9-M), Version 12.2(54)SG1, RELEASE SOFTWARE (fc1)
@@ -742,31 +740,9 @@ def _fake_discovery_result(host_name: str, failed: bool = False) -> AggregatedRe
     return agg
 
 
-def _run(workdir: Path, options=None) -> subprocess.CompletedProcess:
-    if not options:
-        options = []
-    parameters = [
-        sys.executable,
-        '-m',
-        'netdoc_collector',
-        '-o',
-        str(workdir / 'output'),
-        '-s',
-        str(workdir / 'secrets.yaml'),
-        '-i',
-        str(workdir / 'inventory.json'),
-        *options,
-    ]
-    return subprocess.run(
-        parameters,
-        capture_output=True,
-        text=True,
-        timeout=180,
-        cwd=str(workdir),
-    )
-
-
-def _workdir(tmp_path, dump_config=True, dump_secrets=True, dump_inventory=True):
+def _workdir(
+    tmp_path, url=None, token=None, dump_config=True, dump_secrets=True, dump_inventory=True
+):
     config = {
         'cmd_timeout': 10,
         'output': './output',
@@ -774,10 +750,10 @@ def _workdir(tmp_path, dump_config=True, dump_secrets=True, dump_inventory=True)
         'workers': 2,
         'inventory': './inventory.json',
         'backend': {
-            'url': 'http://localhost:8000/',
+            'url': url or 'http://localhost:8000/',
             'verify': False,
             'timeout': 120,
-            'token': None,
+            'token': token,
         },
     }
     secrets = {'credentials': {'label': 'default', 'username': 'admin', 'password': 'admin'}}
@@ -804,7 +780,7 @@ def _workdir(tmp_path, dump_config=True, dump_secrets=True, dump_inventory=True)
         (tmp_path / 'inventory.json').write_text(json.dumps(inventory))
 
 
-class FakeVendorPlugin:
+class FakeVendorPlugin(BasePlugin):
     """Stand-in for a real BasePlugin subclass: no Netmiko/network I/O.
 
     Used to patch netdoc_collector.core.tasks.get_plugin, which is called
@@ -815,12 +791,14 @@ class FakeVendorPlugin:
     tests exercise the real upload flow end-to-end.
     """
 
-    def __init__(
-        self, host_name, host_data=None, plugin=None, report_path=None, cmd_timeout=None, **_kwargs
-    ):
-        self.host_name = host_name
+    def __init__(self, *args, plugin=None, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def collect(self, task) -> dict:
+        self.write_output(RAW_SHOW_VERSION, 'show version')
+        self.write_output(PARSED_SHOW_VERSION, 'show version')
+        self.write_output(RAW_SHOW_INTERFACES, 'show interfaces')
+        self.write_output(PARSED_SHOW_INTERFACES, 'show interfaces')
         return {
             'raw_outputs': {
                 'show version': RAW_SHOW_VERSION,

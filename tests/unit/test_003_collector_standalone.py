@@ -1,25 +1,46 @@
 """Unit tests for NetworkScanner (stand alone)."""
 
 import json
+import logging
 import os
 from unittest.mock import patch
 
-from conftest import FakeVendorPlugin, _run, _workdir
+from conftest import FakeVendorPlugin, _workdir
+
+from netdoc_collector.main import main as netdoc_collector_main
 
 
 class TestCollectorStandalone:
     """Stand alone collector."""
 
     @patch('netdoc_collector.core.tasks.get_plugin')
-    def test_collector(self, mock_get_plugin, tmp_path):
-        # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
-
+    def test_collector(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
+        caplog.set_level(logging.DEBUG)
         _workdir(tmp_path)
-        result = _run(tmp_path)
+        report_path = tmp_path / 'output' / '20260729-135328'
+
+        # Mock result
+        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(
+            **{**kwargs, 'report_path': report_path}
+        )
+
+        monkeypatch.chdir(tmp_path)
+        with patch(
+            'sys.argv',
+            [
+                'collector',
+                '-o',
+                str(report_path),
+                '-s',
+                'secrets.yaml',
+                '-i',
+                'inventory.json',
+            ],
+        ):
+            result = netdoc_collector_main()
 
         # Check result
-        assert result.returncode == 0, result.stderr
+        assert result == 0, caplog.text
 
         # Check inventory
         inventory = json.loads((tmp_path / 'inventory.json').read_text())
@@ -38,3 +59,4 @@ class TestCollectorStandalone:
         directories = [p for p in (tmp_path / 'output').iterdir() if p.is_dir()]
         assert len(directories) == 1
         assert os.path.isdir(directories[0] / '10.0.0.1')
+        assert os.path.isfile(directories[0] / '10.0.0.1' / 'show-version.raw')
