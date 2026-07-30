@@ -28,8 +28,7 @@ lint: ## Code linting (check only)
 	poetry run mypy src/
 
 tests: ## Run tests (pytest only)
-	poetry run pytest tests/unit -v --tb=short
-	poetry run pytest tests/integration -v --tb=short
+	poetry run pytest tests/ -v --tb=short
 
 update: ## Update poetry, SBOM, SDK
 	poetry add netdoc-sdk@latest
