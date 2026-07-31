@@ -19,6 +19,7 @@ from netdoc_collector.core.ansible_inventory import NetDocAnsibleInventory
 from netdoc_collector.core.scanner import NetworkScanner
 
 
+@pytest.mark.django_db(databases=['default', 'logs'])
 class TestScanManaged:
     """Managed scan upload data to the backend."""
 
