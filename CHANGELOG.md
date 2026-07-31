@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.0...v0.7.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* update SDK and test failed device collect ([0114f7c](https://github.com/NetDocLab/netdoc-collector/commit/0114f7c961bb11b63850649ef28815886828677b))
+
 ## [0.7.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.6.6...v0.7.0) (2026-07-30)
 
 
