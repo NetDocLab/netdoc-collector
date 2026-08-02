@@ -151,7 +151,7 @@ def main() -> int:
     backend_timeout = args.timeout or backend_data.get('timeout') or 120
     backend_token = os.getenv('NETDOC_TOKEN') or args.token or backend_data.get('token')
     backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
-    backend_insecure = args.insecure or backend_data.get('insecure', True)
+    backend_insecure = args.insecure or backend_data.get('insecure', False)
 
     # Managed mode configuration
     background_threads: list[Thread] = []
