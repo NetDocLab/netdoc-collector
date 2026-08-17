@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.1...v0.7.2) (2026-08-17)
+
+
+### Bug Fixes
+
+* linting ([a0e17ee](https://github.com/NetDocLab/netdoc-collector/commit/a0e17ee2d283b4f021dcf73af665ce6d28aca94b))
+* remove lab file ([770b5f5](https://github.com/NetDocLab/netdoc-collector/commit/770b5f56a940eedc8ab6874e6bb1750efc8772b2))
+* update SDK ([8789453](https://github.com/NetDocLab/netdoc-collector/commit/8789453463100b3cb77e18eff10bc5ef4ee84973))
+* verify certs by default ([b998069](https://github.com/NetDocLab/netdoc-collector/commit/b9980697aaa71f83a1a47adb58d50a53026ae170))
+
 ## [0.7.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.0...v0.7.1) (2026-07-31)
 
 
