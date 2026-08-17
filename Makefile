@@ -1,5 +1,5 @@
 # Makefile
-.PHONY: install uninstall check coverage doc fmt lint tests
+.PHONY: install uninstall check coverage doc fmt lint tests update
 
 install:
 	poetry install --no-interaction --no-ansi
