@@ -136,7 +136,7 @@ def main() -> int:
         root_logger.addHandler(console_handler)
         root_logger.setLevel(logging.DEBUG)
 
-    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout') or 120
+    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout') or 240
     num_workers = args.workers or cfg.get('workers') or 5
     output_dir = args.output or cfg.get('output', './output')
     retention = args.retention or cfg.get('retention') or 5
