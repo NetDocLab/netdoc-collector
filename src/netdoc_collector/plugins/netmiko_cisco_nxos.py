@@ -47,6 +47,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show version',
             'show vlan',
             'show vpc',
+            'show vpc role',
             'show vrf detail',
             'show vrrp',
         ]
