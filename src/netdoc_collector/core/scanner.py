@@ -7,6 +7,7 @@ appropriate NetDoc plugin.
 
 import json
 import logging
+import re
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -22,6 +23,12 @@ from nornir import InitNornir
 from netdoc_collector.core.tasks import discovery_task
 
 logger = logging.getLogger('scanner')
+
+_ACI_IMAGE = re.compile(
+    r'^[ \t]*(?:kickstart|system|NXOS) image file(?: name)? is:'
+    r'[ \t]*(?:\S*[/ :])?aci-n9000[^\s/]*',
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +135,8 @@ class NetworkScanner:
         Returns:
             A (device_type, credential) tuple on success, or (None, None) if
             no credential matched or no device type could be determined.
+            ACI switches return the collector-only classification cisco_aci,
+            which is not a Netmiko driver and has no supported plugin yet.
         """
         for credential in self.credentials:
             label = credential.get('label')
@@ -156,6 +165,14 @@ class NetworkScanner:
                 continue
 
             device_type = guesser.autodetect()
+
+            # Added to support ACI switches. Remove if no longer needed in the future.
+            if device_type == 'cisco_nxos':
+                # autodetect() has disconnected; reuse its cached show version.
+                # This private Netmiko API must be checked when upgrading.
+                version_output = guesser._results_cache.get('show version', '')
+                if _ACI_IMAGE.search(version_output):
+                    device_type = 'cisco_aci'
             if device_type:
                 return device_type, credential
 
@@ -218,21 +235,26 @@ class NetworkScanner:
                 logging={'enabled': False},
             )
             logger.info('Running collector on %s', ip)
-            results = nr.run(
-                task=discovery_task,
-                report_path=self.report_path,
-                cmd_timeout=self.cmd_timeout,
-                client=self.client,
-                job_id=self.job_id,
-                idempotency_key=self.idempotency_key,
-                claim_token=self.claim_token,
-                cancel_event=self.cancel_event,
-            )
-            # Get first result from multiresult
+            try:
+                results = nr.run(
+                    task=discovery_task,
+                    report_path=self.report_path,
+                    cmd_timeout=self.cmd_timeout,
+                    client=self.client,
+                    job_id=self.job_id,
+                    idempotency_key=self.idempotency_key,
+                    claim_token=self.claim_token,
+                    cancel_event=self.cancel_event,
+                )
+            finally:
+                # This Nornir instance belongs to one scanned host. Release its
+                # sessions before the scanner worker moves on to another host.
+                nr.close_connections(on_good=True, on_failed=True)
+            # Plugins can return partial output after a command subtask fails.
+            # Include those failures instead of inspecting only the parent result.
             _host, multi = next(iter(results.items()))
-            result = multi[0]
-            host_result.discovery_failed = result.failed
-            if result.failed:
+            host_result.discovery_failed = multi.failed
+            if host_result.discovery_failed:
                 logger.info('Discovery failed on %s', ip)
             else:
                 logger.info('Discovery completed on %s', ip)
