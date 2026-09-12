@@ -55,7 +55,8 @@ class NetmikoHpComwarePlugin(BasePlugin):
             # Running Standard commands
             for cmd in self.commands():
                 raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                raw_payload[cmd] = raw_output
+                if raw_output is not None:
+                    raw_payload[cmd] = raw_output
                 if parsed_output:
                     parsed_payload[cmd] = parsed_output
 
