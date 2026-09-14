@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.0...v0.8.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* fix WLC (IOS) collector ([98f96cc](https://github.com/NetDocLab/netdoc-collector/commit/98f96cc4187e201a58bd040a69aae36c868d7d8f))
+* fix WLC (IOS) collector ([2a26d55](https://github.com/NetDocLab/netdoc-collector/commit/2a26d55fe99a4238d403105b3688c27839149f65))
+
 ## [0.8.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.2...v0.8.0) (2026-09-14)
 
 
