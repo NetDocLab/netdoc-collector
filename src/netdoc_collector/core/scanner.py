@@ -66,7 +66,6 @@ _NETMIKO_TO_NETDOC: dict[str, tuple[str, str]] = {
     'cisco_xe': ('cisco_ios', 'netmiko:cisco:ios:ssh'),
     'cisco_nxos': ('cisco_nxos', 'netmiko:cisco:nxos:ssh'),
     'cisco_xr': ('cisco_xr', 'netmiko:cisco_xr:ssh'),
-    'cisco_wlc': ('cisco_wlc', 'netmiko:cisco_wlcios:ssh'),
     'hp_comware': ('hp_comware', 'netmiko:hp:comware:ssh'),
     'hp_procurve': ('hp_procurve', 'netmiko:hp:procurve:ssh'),
     'huawei_vrp': ('huawei_vrp', 'netmiko:huawei:vrp:ssh'),
