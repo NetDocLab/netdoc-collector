@@ -30,10 +30,11 @@ _ACI_IMAGE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-
 # ---------------------------------------------------------------------------
 #  Data model
 # ---------------------------------------------------------------------------
+
+
 @dataclass
 class HostResult:
     """Result of a single host scan.
@@ -65,6 +66,7 @@ _NETMIKO_TO_NETDOC: dict[str, tuple[str, str]] = {
     'cisco_xe': ('cisco_ios', 'netmiko:cisco:ios:ssh'),
     'cisco_nxos': ('cisco_nxos', 'netmiko:cisco:nxos:ssh'),
     'cisco_xr': ('cisco_xr', 'netmiko:cisco_xr:ssh'),
+    'cisco_wlc': ('cisco_wlc', 'netmiko:cisco_wlcios:ssh'),
     'hp_comware': ('hp_comware', 'netmiko:hp:comware:ssh'),
     'hp_procurve': ('hp_procurve', 'netmiko:hp:procurve:ssh'),
     'huawei_vrp': ('huawei_vrp', 'netmiko:huawei:vrp:ssh'),
@@ -166,13 +168,14 @@ class NetworkScanner:
 
             device_type = guesser.autodetect()
 
-            # Added to support ACI switches. Remove if no longer needed in the future.
+            # Cisco ACI detection
             if device_type == 'cisco_nxos':
                 # autodetect() has disconnected; reuse its cached show version.
                 # This private Netmiko API must be checked when upgrading.
                 version_output = guesser._results_cache.get('show version', '')
                 if _ACI_IMAGE.search(version_output):
                     device_type = 'cisco_aci'
+
             if device_type:
                 return device_type, credential
 
