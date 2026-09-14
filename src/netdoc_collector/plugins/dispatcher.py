@@ -10,6 +10,7 @@ from .netmiko_allied_telesis_awplus import NetmikoAlliedTelesisAwplusPlugin
 from .netmiko_aruba_oscx import NetmikoArubaOscxPlugin
 from .netmiko_cisco_ios import NetmikoCiscoIosPlugin
 from .netmiko_cisco_nxos import NetmikoCiscoNxosPlugin
+from .netmiko_cisco_wlcios import NetmikoCiscoWlcIosPlugin
 from .netmiko_cisco_xr import NetmikoCiscoXrPlugin
 from .netmiko_hp_comware import NetmikoHpComwarePlugin
 from .netmiko_hp_procurve import NetmikoHpProcurvePlugin
@@ -26,6 +27,7 @@ PLUGIN_REGISTRY: dict[str, type[BasePlugin]] = {
     'netmiko:cisco:ios:ssh': NetmikoCiscoIosPlugin,
     'netmiko:cisco:ios:telnet': NetmikoCiscoIosPlugin,
     'netmiko:cisco:nxos:ssh': NetmikoCiscoNxosPlugin,
+    'netmiko:cisco:wlcios:ssh': NetmikoCiscoWlcIosPlugin,
     'netmiko:cisco:xr:ssh': NetmikoCiscoXrPlugin,
     'netmiko:hp:comware:ssh': NetmikoHpComwarePlugin,
     'netmiko:hp:procurve:ssh': NetmikoHpProcurvePlugin,
