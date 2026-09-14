@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.2...v0.8.0) (2026-09-14)
+
+
+### Features
+
+* added commands to NX-OS plugin ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+* added discrimination between NX-OS and ACI switches ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+
+
+### Bug Fixes
+
+* fixed bug that kept connections to devices open ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+
 ## [0.7.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.1...v0.7.2) (2026-08-17)
 
 
