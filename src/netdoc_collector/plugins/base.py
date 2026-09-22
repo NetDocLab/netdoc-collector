@@ -68,8 +68,10 @@ class BasePlugin(ABC):
                 return parsed_text
         except TextFSMError:
             pass
-        if 'vrf' in cmd:
-            logger.warning('Cannot parse command %s', cmd)
+
+        if 'Command authorization failed' in raw_text:
+            logger.error('Cannot run command %s', cmd)
+
         return None
 
     @staticmethod
