@@ -5,7 +5,6 @@ mode it also uploads the collected results and host-specific log records to
 NetDoc before returning.
 """
 
-import json
 import logging
 from pathlib import Path
 from threading import Event
@@ -129,26 +128,19 @@ def discovery_task(
             logging.error(str(exc))
             result = Result(host=host, failed=True, exception=exc, result=None)
         else:
-            plugin_data = {
-                'host_data': dict(host.data),
-                'host_name': host.name,
-                'plugin': netdoc_plugin,
-                'report_path': report_path,
-                'cmd_timeout': cmd_timeout,
-            }
-
-            plugin = get_plugin(**plugin_data)
+            plugin = get_plugin(
+                host_data=dict(host.data),
+                host_name=host.name,
+                plugin=netdoc_plugin,
+                report_path=report_path,
+                cmd_timeout=cmd_timeout,
+            )
             try:
                 netdoc_output = plugin.collect(task)
                 result = Result(host=host, result=netdoc_output)
             except Exception as exc:
                 logging.exception('Discovery failed on host %s', host.name)
                 result = Result(host=host, failed=True, exception=exc, result=None)
-
-            # Save data locally
-            data = {**plugin_data, 'result': result}
-            with open(report_path / Path(f'{host.name}.json'), 'w', encoding='utf-8') as fh:
-                json.dump(data, fh, indent=2)
 
         # Push before the task returns. Concurrency is bounded by
         # num_workers (one push per host, in flight at most once per

@@ -157,6 +157,13 @@ class BasePlugin(ABC):
             return
 
         log_file = self.slugify(log)
+
+        # Write metadata
+        with open(self.report_path / Path(f'{log_file}-meta.json'), 'w', encoding='utf-8') as fh:
+            json.dump(
+                {'hostname': self.host_name, 'data': self.host_data, 'log': log}, fh, indent=2
+            )
+
         if isinstance(content, dict | list):
             # Write a JSON file.
             with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:
