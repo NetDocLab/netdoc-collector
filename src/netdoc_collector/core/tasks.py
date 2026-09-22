@@ -147,7 +147,7 @@ def discovery_task(
 
             # Save data locally
             data = {**plugin_data, 'result': result}
-            with open(report_path / Path('report.json'), 'w', encoding='utf-8') as fh:
+            with open(report_path / Path(f'{host.name}.json'), 'w', encoding='utf-8') as fh:
                 json.dump(data, fh, indent=2)
 
         # Push before the task returns. Concurrency is bounded by
