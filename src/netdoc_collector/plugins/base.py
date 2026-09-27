@@ -68,8 +68,10 @@ class BasePlugin(ABC):
                 return parsed_text
         except TextFSMError:
             pass
-        if 'vrf' in cmd:
-            logger.warning('Cannot parse command %s', cmd)
+
+        if 'Command authorization failed' in raw_text:
+            logger.error('Cannot run command %s', cmd)
+
         return None
 
     @staticmethod
@@ -155,6 +157,7 @@ class BasePlugin(ABC):
             return
 
         log_file = self.slugify(log)
+
         if isinstance(content, dict | list):
             # Write a JSON file.
             with open(self.report_path / Path(f'{log_file}.json'), 'w', encoding='utf-8') as fh:

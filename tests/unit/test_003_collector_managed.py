@@ -96,12 +96,10 @@ class TestCollectorManaged:
     def test_collector(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
         caplog.set_level(logging.INFO)
         _workdir(tmp_path, dump_config=False, dump_inventory=False, dump_secrets=False)
-        report_path = tmp_path / 'output' / '20260729-135328'
+        output_dir = tmp_path / 'output'
 
         # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(
-            **{**kwargs, 'report_path': report_path}
-        )
+        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
 
         monkeypatch.chdir(tmp_path)
         with patch(
@@ -109,7 +107,7 @@ class TestCollectorManaged:
             [
                 'collector',
                 '-o',
-                str(report_path),
+                str(output_dir),
                 '-u',
                 self.URL,
                 '--token',
@@ -142,12 +140,10 @@ class TestCollectorManaged:
     def test_collector_fail(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
         caplog.set_level(logging.INFO)
         _workdir(tmp_path, dump_config=False, dump_inventory=False, dump_secrets=False)
-        report_path = tmp_path / 'output' / '20260729-135328'
+        output_dir = tmp_path / 'output'
 
         # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(
-            **{**kwargs, 'report_path': report_path}
-        )
+        mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(**kwargs)
 
         monkeypatch.chdir(tmp_path)
         with patch(
@@ -155,7 +151,7 @@ class TestCollectorManaged:
             [
                 'collector',
                 '-o',
-                str(report_path),
+                str(output_dir),
                 '-u',
                 self.URL,
                 '--token',

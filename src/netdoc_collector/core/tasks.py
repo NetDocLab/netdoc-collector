@@ -5,6 +5,7 @@ mode it also uploads the collected results and host-specific log records to
 NetDoc before returning.
 """
 
+import json
 import logging
 from pathlib import Path
 from threading import Event
@@ -142,6 +143,14 @@ def discovery_task(
                 logging.exception('Discovery failed on host %s', host.name)
                 result = Result(host=host, failed=True, exception=exc, result=None)
 
+        # Write data locally
+        _write_local_data(
+            host=host,
+            result=result,
+            task_logs=task_logs,
+            report_path=report_path,
+        )
+
         # Push before the task returns. Concurrency is bounded by
         # num_workers (one push per host, in flight at most once per
         # worker thread), never by the number of commands executed.
@@ -163,6 +172,41 @@ def discovery_task(
             )
 
     return result
+
+
+def _write_local_data(
+    host,
+    result: Result,
+    task_logs: list[logging.LogRecord],
+    report_path: Path | None,
+) -> None:
+    """Dump payload locally.
+
+    Args:
+        host: Nornir host object.
+        result: result already computed for the host's discovery task.
+        task_logs: log records captured while processing this host.
+        report_path: per-run report directory (output_dir/<timestamp>).
+    """
+    if not report_path:
+        # Write local data only when a report path is available (same as BasePlugin).
+        return
+
+    payload = {
+        'name': host.name,
+        'username': host.data.get('ansible_user'),
+        'discovery_address': host.data.get('ansible_host'),
+        'discovery_mode': host.data.get('netdoc_plugin'),
+        'canonical_device': host.data.get('netdoc_id'),
+        'credential': host.data.get('netdoc_credential_id'),
+        'raw_payload': None if result.failed else result.result,
+        'logs': [format_log_record(r) for r in task_logs],
+    }
+
+    # Write metadata
+    log_file = host.name
+    with open(report_path / Path(f'{log_file}-meta.json'), 'w', encoding='utf-8') as fh:
+        json.dump(payload, fh, indent=2)
 
 
 def _push_discovered_device(
@@ -194,20 +238,21 @@ def _push_discovered_device(
         cancel_event: shared event set when the backend reports that the job is
             being cancelled.
     """
+    payload = {
+        'raw_payload': None if result.failed else result.result,
+        'logs': [format_log_record(r) for r in task_logs],
+        'idempotency_key': idempotency_key,
+    }
+    if host.data.get('netdoc_id'):
+        # Discovery an existent device
+        payload['canonical_device'] = host.data.get('netdoc_id')
+    else:
+        # Discovery a new device (scan)
+        payload['discovery_mode'] = host.data.get('netdoc_plugin')
+        payload['discovery_address'] = host.data.get('ansible_host')
+        payload['credential'] = host.data.get('netdoc_credential_id')
+
     try:
-        payload = {
-            'raw_payload': None if result.failed else result.result,
-            'logs': [format_log_record(r) for r in task_logs],
-            'idempotency_key': idempotency_key,
-        }
-        if host.data.get('netdoc_id'):
-            # Discovery an existent device
-            payload['canonical_device'] = host.data.get('netdoc_id')
-        else:
-            # Discovery a new device (scan)
-            payload['discovery_mode'] = host.data.get('netdoc_plugin')
-            payload['discovery_address'] = host.data.get('ansible_host')
-            payload['credential'] = host.data.get('netdoc_credential_id')
         response = client.discovery_jobs_push_discovered_device(
             id=job_id,
             claim_token=claim_token,
