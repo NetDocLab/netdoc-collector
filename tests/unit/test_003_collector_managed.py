@@ -11,7 +11,7 @@ from apps.core.models import LogRecord, Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
 from apps.inventory.models import CanonicalDevice, Device, Site
-from conftest import FakeVendorPlugin, _workdir
+from conftest import FailingVendorPlugin, FakeVendorPlugin, _workdir
 from django.contrib.auth import get_user_model
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from rest_framework.authtoken.models import Token
@@ -143,7 +143,7 @@ class TestCollectorManaged:
         output_dir = tmp_path / 'output'
 
         # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
+        mock_get_plugin.side_effect = lambda **kwargs: FailingVendorPlugin(**kwargs)
 
         monkeypatch.chdir(tmp_path)
         with patch(

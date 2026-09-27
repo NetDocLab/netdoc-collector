@@ -178,7 +178,7 @@ def _write_local_data(
     host,
     result: Result,
     task_logs: list[logging.LogRecord],
-    report_path: Path,
+    report_path: Path | None,
 ) -> None:
     """Dump payload locally.
 
@@ -188,6 +188,10 @@ def _write_local_data(
         task_logs: log records captured while processing this host.
         report_path: per-run report directory (output_dir/<timestamp>).
     """
+    if not report_path:
+        # Write local data only when a report path is available (same as BasePlugin).
+        return
+
     payload = {
         'name': host.name,
         'username': host.data.get('ansible_user'),
