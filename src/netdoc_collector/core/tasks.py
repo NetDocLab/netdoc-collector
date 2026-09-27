@@ -186,9 +186,10 @@ def _write_local_data(
         host: Nornir host object.
         result: result already computed for the host's discovery task.
         task_logs: log records captured while processing this host.
+        report_path: per-run report directory (output_dir/<timestamp>).
     """
     payload = {
-        'name': host.data.get('name'),
+        'name': host.name,
         'username': host.data.get('ansible_user'),
         'discovery_address': host.data.get('ansible_host'),
         'discovery_mode': host.data.get('netdoc_plugin'),
@@ -199,7 +200,7 @@ def _write_local_data(
     }
 
     # Write metadata
-    log_file = host.data.get('name') or host.data.get('ansible_host')
+    log_file = host.name
     with open(report_path / Path(f'{log_file}-meta.json'), 'w', encoding='utf-8') as fh:
         json.dump(payload, fh, indent=2)
 

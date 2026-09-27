@@ -17,12 +17,10 @@ class TestCollectorStandalone:
     def test_collector(self, mock_get_plugin, tmp_path, caplog, monkeypatch):
         caplog.set_level(logging.INFO)
         _workdir(tmp_path)
-        report_path = tmp_path / 'output' / '20260729-135328'
+        output_dir = tmp_path / 'output'
 
         # Mock result
-        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(
-            **{**kwargs, 'report_path': report_path}
-        )
+        mock_get_plugin.side_effect = lambda **kwargs: FakeVendorPlugin(**kwargs)
 
         monkeypatch.chdir(tmp_path)
         with patch(
@@ -30,7 +28,7 @@ class TestCollectorStandalone:
             [
                 'collector',
                 '-o',
-                str(report_path),
+                str(output_dir),
                 '-s',
                 'secrets.yaml',
                 '-i',
