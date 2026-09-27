@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.1...v0.8.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* dump a single report file locally ([0e69888](https://github.com/NetDocLab/netdoc-collector/commit/0e698882c5b70ab3c03907126675ed2884f985cb))
+* dump a single report file locally ([46e3562](https://github.com/NetDocLab/netdoc-collector/commit/46e35627765e9d28cf00d9279665447a24942640))
+* fix report_path = None ([0dd754d](https://github.com/NetDocLab/netdoc-collector/commit/0dd754d44e04160173172fa552b72e8ce6955eba))
+
 ## [0.8.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.0...v0.8.1) (2026-09-14)
 
 
