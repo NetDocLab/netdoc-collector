@@ -1,4 +1,3 @@
-# .github/dependabot.yml (collector)
 version: 2
 updates:
   # Track new SDK releases on PyPI
@@ -24,3 +23,6 @@ updates:
       interval: "weekly"
     # Security updates only
     open-pull-requests-limit: 0
+    commit-message:
+      prefix: "chore"
+      include: "scope"
