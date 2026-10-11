@@ -39,18 +39,18 @@ jobs:
       - name: "Setting PostgreSQL administrative privileges"
         run: "sudo su - postgres -c 'psql -c \"alter user ${{ env.DB_USERNAME }} createdb\"'"
       - name: Checkout (collector)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: netdoc-collector
       - name: Checkout (backend)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: NetDocLab/netdoc
           path: netdoc
           # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
           token: ${{ secrets.NETDOC_REPO_TOKEN }}
       - name: Checkout (SDK)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: NetDocLab/netdoc-sdk
           path: netdoc-sdk
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Snyk
         uses: snyk/actions/python@master
         env:
