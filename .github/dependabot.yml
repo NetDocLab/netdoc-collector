@@ -14,6 +14,10 @@ updates:
       security:
         applies-to: security-updates
         patterns: ["*"]
+    # Conventional commit messages so release-please picks up the bump
+    commit-message:
+      prefix: "fix"
+      include: "scope"  # -> "fix(deps): bump netdoc-sdk ..."
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
