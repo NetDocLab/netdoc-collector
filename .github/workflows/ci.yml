@@ -57,7 +57,7 @@ jobs:
           # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
           token: ${{ secrets.NETDOC_SDK_REPO_TOKEN }}
       - name: Setup Python3
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
