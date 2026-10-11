@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.3...v0.8.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* update dependabot config ([e991d59](https://github.com/NetDocLab/netdoc-collector/commit/e991d59d6b966fecde700f3f4d9c35355d75f10d))
+
 ## [0.8.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.2...v0.8.3) (2026-10-11)
 
 
