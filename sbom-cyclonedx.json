@@ -65,7 +65,7 @@
       "version": "0.7.0"
     },
     {
-      "bom-ref": "anyio@4.13.0",
+      "bom-ref": "anyio@4.14.2",
       "description": "High-level concurrency and networking framework on top of asyncio or Trio",
       "externalReferences": [
         {
@@ -73,28 +73,28 @@
           "hashes": [
             {
               "alg": "SHA-256",
-              "content": "08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708"
+              "content": "9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494"
             }
           ],
           "type": "distribution",
-          "url": "https://pypi.org/simple/anyio/#anyio-4.13.0-py3-none-any.whl"
+          "url": "https://pypi.org/simple/anyio/#anyio-4.14.2-py3-none-any.whl"
         },
         {
           "comment": "from legacy-api",
           "hashes": [
             {
               "alg": "SHA-256",
-              "content": "334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc"
+              "content": "cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f"
             }
           ],
           "type": "distribution",
-          "url": "https://pypi.org/simple/anyio/#anyio-4.13.0.tar.gz"
+          "url": "https://pypi.org/simple/anyio/#anyio-4.14.2.tar.gz"
         }
       ],
       "name": "anyio",
-      "purl": "pkg:pypi/anyio@4.13.0",
+      "purl": "pkg:pypi/anyio@4.14.2",
       "type": "library",
-      "version": "4.13.0"
+      "version": "4.14.2"
     },
     {
       "bom-ref": "arrow@1.4.0",
@@ -10725,7 +10725,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "netdoc@0.5.1",
+      "bom-ref": "netdoc@0.5.3",
       "description": "Network Documentation Platform - Application",
       "externalReferences": [
         {
@@ -10742,10 +10742,10 @@
         }
       ],
       "type": "library",
-      "version": "0.5.1"
+      "version": "0.5.3"
     },
     {
-      "bom-ref": "netdoc-sdk@0.7.2",
+      "bom-ref": "netdoc-sdk@0.7.3",
       "description": "Network Documentation Platform - SDK",
       "externalReferences": [
         {
@@ -10762,7 +10762,7 @@
         }
       ],
       "type": "library",
-      "version": "0.7.2"
+      "version": "0.7.3"
     },
     {
       "bom-ref": "netutils@1.17.2",
@@ -17631,7 +17631,7 @@
         "idna@3.11",
         "typing-extensions@4.15.0"
       ],
-      "ref": "anyio@4.13.0"
+      "ref": "anyio@4.14.2"
     },
     {
       "dependsOn": [
@@ -17854,7 +17854,7 @@
     },
     {
       "dependsOn": [
-        "anyio@4.13.0",
+        "anyio@4.14.2",
         "certifi@2026.4.22",
         "httpcore@1.0.9",
         "idna@3.11"
@@ -18084,8 +18084,8 @@
         "mkdocs@1.6.1",
         "mkdocstrings@1.0.4",
         "mypy@2.1.0",
-        "netdoc-sdk@0.7.2",
-        "netdoc@0.5.1",
+        "netdoc-sdk@0.7.3",
+        "netdoc@0.5.3",
         "pre-commit@4.5.1",
         "psycopg@3.3.4",
         "pydantic@2.13.4",
@@ -18104,10 +18104,11 @@
         "httpx@0.28.1",
         "pydantic@2.13.4"
       ],
-      "ref": "netdoc-sdk@0.7.2"
+      "ref": "netdoc-sdk@0.7.3"
     },
     {
       "dependsOn": [
+        "anyio@4.14.2",
         "celery@5.6.3",
         "click@8.4.1",
         "cryptography@50.0.0",
@@ -18116,13 +18117,14 @@
         "djangorestframework@3.18.0",
         "dotenv@0.9.9",
         "drf-spectacular@0.29.0",
+        "httpx@0.28.1",
         "netutils@1.17.2",
         "psycopg@3.3.4",
         "python-decouple@3.8",
         "redis@7.3.0",
         "whitenoise@6.12.0"
       ],
-      "ref": "netdoc@0.5.1"
+      "ref": "netdoc@0.5.3"
     },
     {
       "ref": "netutils@1.17.2"
@@ -18430,7 +18432,7 @@
       "name": "netdoc-collector",
       "type": "application"
     },
-    "timestamp": "2026-08-17T13:20:47.565525+00:00",
+    "timestamp": "2026-10-11T08:32:12.211242+00:00",
     "tools": {
       "components": [
         {
@@ -18534,7 +18536,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:8aa1ea1a-ce70-4ac1-ae87-a7eb974274db",
+  "serialNumber": "urn:uuid:e6fff6c7-6062-4ef5-8930-101d7f45e082",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
