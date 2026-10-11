@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.2...v0.8.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* update SDK ([bfbed05](https://github.com/NetDocLab/netdoc-collector/commit/bfbed0505c68af680437250c81695958e6cb0760))
+* update SDK ([9acc628](https://github.com/NetDocLab/netdoc-collector/commit/9acc628373c7b33beebe3b18eefbaeec500c0623))
+
 ## [0.8.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.1...v0.8.2) (2026-09-27)
 
 
