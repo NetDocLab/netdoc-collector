@@ -1,3 +1,4 @@
+# .github/dependabot.yml (collector)
 version: 2
 updates:
   # Track new SDK releases on PyPI
@@ -5,10 +6,17 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    # Version updates: SDK always kept up to date
     allow:
       - dependency-name: "netdoc-sdk"
-  # Keep workflow actions up to date
+    groups:
+      # Bundle security fixes into a single PR
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    # Security updates only
+    open-pull-requests-limit: 0
