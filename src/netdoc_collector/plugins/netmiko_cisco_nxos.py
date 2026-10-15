@@ -6,9 +6,11 @@ from nornir.core.task import Task
 
 from .base import BasePlugin
 
-
 class NetmikoCiscoNxosPlugin(BasePlugin):
     """Netmiko plugin for Cisco NX-OS devices."""
+
+
+    AAA_AUTH_ERROR_MESSAGE ="AAA authorization failed"
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -16,6 +18,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             # VRF aware commands
             return [
                 f'show ip arp vrf {vrf}',
+                f'show ip bgp neighbors vrf {vrf}',
             ]
 
         # Standard commands
@@ -30,10 +33,9 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show interface trunk',
             'show interface',
             'show inventory',
-            'show ip bgp neighbors',
             'show ip eigrp neighbors',
             'show ip interface vrf all',
-            'show ip ospf neighbor',
+            'show ip ospf neighbor vrf all',
             'show ip route vrf all',
             'show lacp neighbor',
             'show lldp neighbors detail',
@@ -64,21 +66,35 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
         try:
             # Running Standard commands
             for cmd in self.commands():
-                raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                if raw_output is not None:
-                    raw_payload[cmd] = raw_output
-                if parsed_output:
-                    parsed_payload[cmd] = parsed_output
+
+                retries = 0
+                while retries < self.max_retries:
+                    raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+
+                    if raw_output is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_output:
+
+                        raw_payload[cmd] = raw_output
+                        if parsed_output:
+                            parsed_payload[cmd] = parsed_output
+                        break
+                    logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
+                    retries += 1
 
             # Running VRF aware commands
             vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf detail', [])]
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
-                    raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                    if raw_text is not None:
-                        raw_payload[cmd] = raw_text
-                    if parsed_text:
-                        parsed_payload[cmd] = parsed_text
+
+                    retries = 0
+                    while retries < self.max_retries:
+                        raw_output, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+                        if raw_output is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_output:
+                            raw_payload[cmd] = raw_output
+                            if parsed_text:
+                                parsed_payload[cmd] = parsed_text
+                            break
+                        logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
+                        retries += 1
 
         except Exception:
             logging.error('Stopping collection on %s due to error', self.host_name)

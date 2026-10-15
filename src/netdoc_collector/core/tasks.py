@@ -128,16 +128,21 @@ def discovery_task(
             logging.error(str(exc))
             result = Result(host=host, failed=True, exception=exc, result=None)
         else:
-            plugin = get_plugin(
-                host_data=dict(host.data),
-                host_name=host.name,
-                plugin=netdoc_plugin,
-                report_path=report_path,
-                cmd_timeout=cmd_timeout,
-            )
             try:
+                plugin = get_plugin(
+                    host_data=dict(host.data),
+                    host_name=host.name,
+                    plugin=netdoc_plugin,
+                    report_path=report_path,
+                    cmd_timeout=cmd_timeout,
+                )
+                plugin.cancel_event = cancel_event
                 netdoc_output = plugin.collect(task)
-                result = Result(host=host, result=netdoc_output)
+                result = Result(
+                    host=host,
+                    result=netdoc_output,
+                    failed=task.results.failed or cancel_event.is_set(),
+                )
             except Exception as exc:
                 logging.exception('Discovery failed on host %s', host.name)
                 result = Result(host=host, failed=True, exception=exc, result=None)
@@ -196,7 +201,7 @@ def _push_discovered_device(
     """
     try:
         payload = {
-            'raw_payload': None if result.failed else result.result,
+            'raw_payload': result.result,
             'logs': [format_log_record(r) for r in task_logs],
             'idempotency_key': idempotency_key,
         }

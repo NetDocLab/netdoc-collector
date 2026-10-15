@@ -7,6 +7,7 @@ vendor-specific collector plugins.
 import json
 import logging
 import re
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,8 @@ class BasePlugin(ABC):
         self.host_name: str = host_name
         self.host_data: dict = host_data
         self.cmd_timeout: int = cmd_timeout
+        self.throttle_commands: float = 0.2
+        self.max_retries: int = 3
 
         if report_path:
             # Create a per-host report directory when output capture is enabled.
@@ -137,6 +140,10 @@ class BasePlugin(ABC):
         parsed_text = self.parse_netmiko_output(raw_text, platform, cmd)
         self.write_output(raw_text, cmd)
         self.write_output(parsed_text, cmd)
+
+        if self.throttle_commands:
+            logger.debug('Throttling command execution for %s seconds on %s', self.throttle_commands, self.host_name)
+            time.sleep(self.throttle_commands)
 
         return raw_text, parsed_text
 
