@@ -55,6 +55,14 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show vpc role',
             'show vrf detail',
             'show vrrp',
+
+            # VXLAN commands
+            'show nve interface',
+            'show nve peers',
+            'show nve vni',
+            'show l2route evpn mac all',
+            'show l2route evpn mac-ip all',
+            'show vxlan', #mapping VLAN ID - VNI
         ]
 
     def collect(self, task: Task) -> dict[str, dict]:
