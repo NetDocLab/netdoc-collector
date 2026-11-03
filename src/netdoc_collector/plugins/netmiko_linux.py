@@ -44,7 +44,8 @@ class NetmikoLinuxAnyPlugin(BasePlugin):
             # Running Standard commands
             for cmd in self.commands():
                 raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                raw_payload[cmd] = raw_output
+                if raw_output is not None:
+                    raw_payload[cmd] = raw_output
                 if parsed_output:
                     parsed_payload[cmd] = parsed_output
 
@@ -53,7 +54,8 @@ class NetmikoLinuxAnyPlugin(BasePlugin):
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
                     raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                    raw_payload[cmd] = raw_text
+                    if raw_text is not None:
+                        raw_payload[cmd] = raw_text
                     if parsed_text:
                         parsed_payload[cmd] = parsed_text
 

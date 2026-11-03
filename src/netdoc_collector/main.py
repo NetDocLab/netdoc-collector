@@ -60,7 +60,7 @@ from netdoc_collector.core.utils import (
 )
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,
     format='%(asctime)s  %(levelname)-8s  %(name)s  %(message)s',
     datefmt='%Y-%m-%dT%H:%M:%S',
     handlers=[
@@ -136,8 +136,8 @@ def main() -> int:
         root_logger.addHandler(console_handler)
         root_logger.setLevel(logging.DEBUG)
 
-    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout') or 240
-    num_workers = args.workers or cfg.get('workers') or 5
+    cmd_timeout = args.cmd_timeout or cfg.get('cmd_timeout') or 300
+    num_workers = args.workers or cfg.get('workers') or 10
     output_dir = args.output or cfg.get('output', './output')
     retention = args.retention or cfg.get('retention') or 5
     report_path = Path(output_dir) / Path(datetime.now().strftime(REPORT_PATH_FMT))
@@ -148,7 +148,7 @@ def main() -> int:
 
     # Reading arguments: managed mode
     backend_data = cfg.get('backend', {})
-    backend_timeout = args.timeout or backend_data.get('timeout') or 120
+    backend_timeout = args.timeout or backend_data.get('timeout') or 1200000
     backend_token = os.getenv('NETDOC_TOKEN') or args.token or backend_data.get('token')
     backend_url = args.url or backend_data.get('url', 'http://localhost:8000')
     backend_insecure = args.insecure or backend_data.get('insecure', False)
@@ -249,7 +249,7 @@ def main() -> int:
             networks.append(network)
 
         # Scan (stand-alone)
-        scan_workers = num_workers * 10
+        scan_workers = num_workers * 2
         scanner = NetworkScanner(
             cancel_event=cancel_event,
             cmd_timeout=cmd_timeout,
@@ -258,7 +258,7 @@ def main() -> int:
             networks=networks,
             ports=[22, 23, 80, 443],
             report_path=report_path,
-            timeout=0.5,
+            timeout=5,
         )
         logger.info('Starting scan with %d workers', scan_workers)
         hosts = scanner.scan()
@@ -356,7 +356,7 @@ def main() -> int:
         # after this, on the main thread, so the two phases run concurrently.
         # We only ever wait for this future right before computing the job's
         # final counters/status, further down.
-        scan_workers = num_workers * 10
+        scan_workers = num_workers * 2
         scanner = NetworkScanner(
             cancel_event=cancel_event,
             cmd_timeout=cmd_timeout,
@@ -365,7 +365,7 @@ def main() -> int:
             networks=networks,
             ports=[22, 23, 80, 443],
             report_path=report_path,
-            timeout=0.5,
+            timeout=5,
             claim_token=claim_token,
             client=client,
             excluded_addresses=excluded_addresses,

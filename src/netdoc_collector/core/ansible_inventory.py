@@ -110,16 +110,16 @@ class NetDocAnsibleInventory:
                 ):
                     host_groups.append(groups[group_name])
 
-            # Configure privilege escalation
+            netmiko_extras: dict[str, int | str] = {
+                'conn_timeout': 60,
+                'banner_timeout': 60,
+                'auth_timeout': 60,
+            }
             ansible_become = host_data.get('ansible_become', '')
             ansible_become_password = host_data.get('ansible_become_password', '')
-            connection_options = {}
-            if ansible_become and ansible_become_password:
-                connection_options['netmiko'] = ConnectionOptions(
-                    extras={'secret': ansible_become_password}
-                    if ansible_become == 'yes' and ansible_become_password
-                    else {}
-                )
+            if ansible_become == 'yes' and ansible_become_password:
+                netmiko_extras['secret'] = ansible_become_password
+            connection_options['netmiko'] = ConnectionOptions(extras=netmiko_extras)
 
             hosts[inventory_hostname] = Host(
                 name=inventory_hostname,
