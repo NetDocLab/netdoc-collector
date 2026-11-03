@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.3...v0.9.0) (2026-11-03)
+
+
+### Features
+
+* implemented command retry in case of AAA servers timeout on Cisco IOS and NX-OS ([2216cf7](https://github.com/NetDocLab/netdoc-collector/commit/2216cf7a61583e0e640d7d6762a3fe0ee221ea48))
+* introduced 200ms delay between commands ([2216cf7](https://github.com/NetDocLab/netdoc-collector/commit/2216cf7a61583e0e640d7d6762a3fe0ee221ea48))
+
+
+### Bug Fixes
+
+* increased general timeouts ([2216cf7](https://github.com/NetDocLab/netdoc-collector/commit/2216cf7a61583e0e640d7d6762a3fe0ee221ea48))
+* update dependabot config ([cdcd69d](https://github.com/NetDocLab/netdoc-collector/commit/cdcd69d984be1c5d4b1acc9de6d75b8c010740bd))
+* update dependabot config ([e991d59](https://github.com/NetDocLab/netdoc-collector/commit/e991d59d6b966fecde700f3f4d9c35355d75f10d))
+
 ## [0.8.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.2...v0.8.3) (2026-10-11)
 
 
