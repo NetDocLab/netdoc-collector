@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.8.3](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.2...v0.8.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* update SDK ([bfbed05](https://github.com/NetDocLab/netdoc-collector/commit/bfbed0505c68af680437250c81695958e6cb0760))
+* update SDK ([9acc628](https://github.com/NetDocLab/netdoc-collector/commit/9acc628373c7b33beebe3b18eefbaeec500c0623))
+
+## [0.8.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.1...v0.8.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* dump a single report file locally ([0e69888](https://github.com/NetDocLab/netdoc-collector/commit/0e698882c5b70ab3c03907126675ed2884f985cb))
+* dump a single report file locally ([46e3562](https://github.com/NetDocLab/netdoc-collector/commit/46e35627765e9d28cf00d9279665447a24942640))
+* fix report_path = None ([0dd754d](https://github.com/NetDocLab/netdoc-collector/commit/0dd754d44e04160173172fa552b72e8ce6955eba))
+
+## [0.8.1](https://github.com/NetDocLab/netdoc-collector/compare/v0.8.0...v0.8.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* fix WLC (IOS) collector ([98f96cc](https://github.com/NetDocLab/netdoc-collector/commit/98f96cc4187e201a58bd040a69aae36c868d7d8f))
+* fix WLC (IOS) collector ([2a26d55](https://github.com/NetDocLab/netdoc-collector/commit/2a26d55fe99a4238d403105b3688c27839149f65))
+
+## [0.8.0](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.2...v0.8.0) (2026-09-14)
+
+
+### Features
+
+* added commands to NX-OS plugin ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+* added discrimination between NX-OS and ACI switches ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+
+
+### Bug Fixes
+
+* fixed bug that kept connections to devices open ([8e0d682](https://github.com/NetDocLab/netdoc-collector/commit/8e0d682ba53a182e8b3acbf6bf5e9516eca978ba))
+
 ## [0.7.2](https://github.com/NetDocLab/netdoc-collector/compare/v0.7.1...v0.7.2) (2026-08-17)
 
 

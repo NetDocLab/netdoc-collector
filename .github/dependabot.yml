@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Track new SDK releases on PyPI
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    # Version updates: SDK always kept up to date
+    allow:
+      - dependency-name: "netdoc-sdk"
+    groups:
+      # Bundle security fixes into a single PR
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+    # Conventional commit messages so release-please picks up the bump
+    commit-message:
+      prefix: "fix"
+      include: "scope"  # -> "fix(deps): bump netdoc-sdk ..."
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Security updates only
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "chore"
+      include: "scope"

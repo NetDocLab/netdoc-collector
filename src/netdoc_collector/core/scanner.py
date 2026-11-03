@@ -30,10 +30,11 @@ _ACI_IMAGE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-
 # ---------------------------------------------------------------------------
 #  Data model
 # ---------------------------------------------------------------------------
+
+
 @dataclass
 class HostResult:
     """Result of a single host scan.
@@ -166,13 +167,14 @@ class NetworkScanner:
 
             device_type = guesser.autodetect()
 
-            # Added to support ACI switches. Remove if no longer needed in the future.
+            # Cisco ACI detection
             if device_type == 'cisco_nxos':
                 # autodetect() has disconnected; reuse its cached show version.
                 # This private Netmiko API must be checked when upgrading.
                 version_output = guesser._results_cache.get('show version', '')
                 if _ACI_IMAGE.search(version_output):
                     device_type = 'cisco_aci'
+
             if device_type:
                 return device_type, credential
 

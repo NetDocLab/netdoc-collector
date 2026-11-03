@@ -20,7 +20,7 @@ concurrency:
 jobs:
   unit-tests:
     if: "${{ !contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Updating APT cache"
         run: "sudo apt-get update"
@@ -39,25 +39,25 @@ jobs:
       - name: "Setting PostgreSQL administrative privileges"
         run: "sudo su - postgres -c 'psql -c \"alter user ${{ env.DB_USERNAME }} createdb\"'"
       - name: Checkout (collector)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: netdoc-collector
       - name: Checkout (backend)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: NetDocLab/netdoc
           path: netdoc
           # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
           token: ${{ secrets.NETDOC_REPO_TOKEN }}
       - name: Checkout (SDK)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: NetDocLab/netdoc-sdk
           path: netdoc-sdk
           # User -> Settings -> Developer Settings -> Personal Access Token (Permission -> Content
           token: ${{ secrets.NETDOC_SDK_REPO_TOKEN }}
       - name: Setup Python3
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
@@ -87,10 +87,10 @@ jobs:
   snyk:
     if: "${{ !contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
     needs: unit-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Snyk
         uses: snyk/actions/python@master
         env:
