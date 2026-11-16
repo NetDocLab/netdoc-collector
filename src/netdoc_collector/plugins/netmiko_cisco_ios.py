@@ -10,7 +10,7 @@ from .base import BasePlugin
 class NetmikoCiscoIosPlugin(BasePlugin):
     """Netmiko plugin for Cisco IOS devices."""
 
-    AAA_AUTH_ERROR_MESSAGE ="AAA authorization failed"
+    AAA_AUTH_ERROR_MESSAGE = 'AAA authorization failed'
 
     @staticmethod
     def commands(vrf=None) -> list[str]:
@@ -21,10 +21,16 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                 return [
                     'show ip arp',
                     'show ip route',
+                    'show ipv6 neighbors',
+                    'show ipv6 route',
+                    'show ipv6 nd on-link prefix',
                 ]
             return [
                 f'show ip arp vrf {vrf}',
                 f'show ip route vrf {vrf}',
+                f'show ipv6 neighbors vrf {vrf}',
+                f'show ipv6 route vrf {vrf}',
+                f'show ipv6 nd on-link prefix vrf {vrf}',
             ]
 
         # Standard commands
@@ -61,6 +67,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ip interface',
             'show ip ospf neighbor',
             'show ip ssh',
+            'show ipv6 interface',
             'show isis neighbors',
             'show license status',
             'show license summary',
@@ -104,7 +111,11 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                         if parsed_output:
                             parsed_payload[cmd] = parsed_output
                         break
-                    logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
+                    logging.error(
+                        'Retrying command %s on %s due to AAA authorization error',
+                        cmd,
+                        self.host_name,
+                    )
                     retries += 1
 
             # Running VRF aware commands
@@ -119,7 +130,11 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                             if parsed_text:
                                 parsed_payload[cmd] = parsed_text
                             break
-                        logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
+                        logging.error(
+                            'Retrying command %s on %s due to AAA authorization error',
+                            cmd,
+                            self.host_name,
+                        )
                         retries += 1
 
         except Exception:
