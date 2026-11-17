@@ -65,7 +65,9 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ip bgp neighbors',
             'show ip eigrp neighbors',
             'show ip interface',
+            'show ip ospf',
             'show ip ospf neighbor',
+            'show ip ospf interface',
             'show ip ssh',
             'show ipv6 interface',
             'show isis neighbors',
@@ -119,7 +121,16 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                     retries += 1
 
             # Running VRF aware commands
-            vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf', [])]
+            vrfs = []
+            seen_vrfs = set()
+            for row in parsed_payload.get('show vrf', []):
+                name = str(row.get('name', '')).strip()
+                key = name
+                if name and key not in seen_vrfs:
+                    seen_vrfs.add(key)
+                    vrfs.append(name)
+            if 'default' not in seen_vrfs:
+                vrfs.insert(0, 'default')
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
                     retries = 0

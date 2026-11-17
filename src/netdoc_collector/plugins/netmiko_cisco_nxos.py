@@ -19,6 +19,8 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             return [
                 f'show ip arp vrf {vrf}',
                 f'show ip bgp neighbors vrf {vrf}',
+                f'show ip ospf vrf {vrf}',
+                f'show ip ospf interface vrf {vrf}',
             ]
 
         # Standard commands
@@ -93,7 +95,16 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                     retries += 1
 
             # Running VRF aware commands
-            vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf detail', [])]
+            vrfs = []
+            seen_vrfs = set()
+            for row in parsed_payload.get('show vrf detail', []):
+                name = str(row.get('name', '')).strip()
+                key = name
+                if name and key not in seen_vrfs:
+                    seen_vrfs.add(key)
+                    vrfs.append(name)
+            if 'default' not in seen_vrfs:
+                vrfs.insert(0, 'default')
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf):
                     retries = 0
