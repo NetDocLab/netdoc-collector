@@ -19,6 +19,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             return [
                 f'show ip arp vrf {vrf}',
                 f'show ip bgp neighbors vrf {vrf}',
+                f'show bgp vrf {vrf} all neighbors',
                 f'show ip ospf vrf {vrf}',
                 f'show ip ospf interface vrf {vrf}',
             ]
