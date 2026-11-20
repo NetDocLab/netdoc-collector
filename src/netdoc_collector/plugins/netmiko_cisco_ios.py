@@ -5,6 +5,7 @@ import logging
 from nornir.core.task import Task
 
 from .base import BasePlugin
+from .cisco_eigrp import eigrp_configured_vrfs, ios_eigrp_commands
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
@@ -13,7 +14,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
     AAA_AUTH_ERROR_MESSAGE = 'AAA authorization failed'
 
     @staticmethod
-    def commands(vrf=None) -> list[str]:
+    def commands(vrf=None, *, config='') -> list[str]:
         if vrf:
             # VRF aware commands
             if vrf == 'default':
@@ -24,6 +25,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                     'show ipv6 neighbors',
                     'show ipv6 route',
                     'show ipv6 nd on-link prefix',
+                    *ios_eigrp_commands(config, vrf),
                 ]
             return [
                 f'show ip arp vrf {vrf}',
@@ -33,6 +35,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                 f'show ipv6 neighbors vrf {vrf}',
                 f'show ipv6 route vrf {vrf}',
                 f'show ipv6 nd on-link prefix vrf {vrf}',
+                *ios_eigrp_commands(config, vrf),
             ]
 
         # Standard commands
@@ -69,6 +72,10 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show ip bgp template peer-policy',
             'show bgp ipv6 unicast neighbors',
             'show ip eigrp neighbors',
+            'show ip eigrp neighbors detail',
+            'show ip eigrp interfaces detail',
+            'show ipv6 eigrp neighbors detail',
+            'show ipv6 eigrp interfaces detail',
             'show ip interface',
             'show ip ospf',
             'show ip ospf neighbor',
@@ -147,8 +154,10 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                     vrfs.append(name)
             if 'default' not in seen_vrfs:
                 vrfs.insert(0, 'default')
+            config = raw_payload.get('show running-config', '')
+            vrfs.extend(name for name in eigrp_configured_vrfs(config) if name not in vrfs)
             for vrf in vrfs:
-                for cmd in self.commands(vrf=vrf):
+                for cmd in self.commands(vrf=vrf, config=config):
                     retries = 0
                     while retries < self.max_retries:
                         raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
