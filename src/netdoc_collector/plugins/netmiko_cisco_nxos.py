@@ -110,6 +110,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show vpc role',
             'show vrf detail',
             'show vrrp',
+            'show vrrpv3 all',
             # VXLAN commands
             'show nve interface',
             'show nve peers',

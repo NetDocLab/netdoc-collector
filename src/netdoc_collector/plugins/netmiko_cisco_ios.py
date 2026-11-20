@@ -124,6 +124,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show vlan',
             'show vrf',
             'show vrrp all',
+            'show vrrp detail',
             'show vtp status',
             'show wlan sum',
         ]
