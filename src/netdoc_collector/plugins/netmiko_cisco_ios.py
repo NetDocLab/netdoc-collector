@@ -117,6 +117,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show spanning-tree summary',
             'show spanning-tree',
             'show standby',
+            'show standby all',
             'show switch stack-ports',
             'show switch',
             'show version',
