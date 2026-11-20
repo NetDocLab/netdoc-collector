@@ -6,6 +6,7 @@ import re
 from nornir.core.task import Task
 
 from .base import BasePlugin
+from .cisco_eigrp import eigrp_configured_vrfs, nxos_eigrp_commands
 
 
 def _bgp_template_commands(config: str, vrf: str) -> list[str]:
@@ -52,6 +53,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                 f'show ip ospf vrf {vrf}',
                 f'show ip ospf interface vrf {vrf}',
                 *_bgp_template_commands(config, vrf),
+                *nxos_eigrp_commands(config, vrf),
             ]
 
         # Standard commands
@@ -67,6 +69,10 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show interface',
             'show inventory',
             'show ip eigrp neighbors',
+            'show ip eigrp neighbors detail vrf all',
+            'show ip eigrp',
+            'show ipv6 eigrp',
+            'show ipv6 eigrp neighbors detail vrf all',
             'show ip interface vrf all',
             'show ip ospf neighbor vrf all',
             'show ip route vrf all',
@@ -140,10 +146,12 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                     vrfs.append(name)
             if 'default' not in seen_vrfs:
                 vrfs.insert(0, 'default')
+            config = raw_payload.get('show running-config', '')
+            vrfs.extend(
+                name for name in eigrp_configured_vrfs(config, nxos=True) if name not in vrfs
+            )
             for vrf in vrfs:
-                for cmd in self.commands(
-                    vrf=vrf, config=raw_payload.get('show running-config', '')
-                ):
+                for cmd in self.commands(vrf=vrf, config=config):
                     retries = 0
                     while retries < self.max_retries:
                         raw_output, parsed_text = self.run_netmiko_cmd(
