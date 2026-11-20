@@ -37,6 +37,13 @@ def _bgp_template_commands(config: str, vrf: str) -> list[str]:
     return list(commands)
 
 
+def _isis_commands(vrf: str) -> list[str]:
+    return [
+        f'show isis {view} vrf {vrf}'
+        for view in ('protocol', 'interface', 'adjacency', 'hostname detail')
+    ]
+
+
 class NetmikoCiscoNxosPlugin(BasePlugin):
     """Netmiko plugin for Cisco NX-OS devices."""
 
@@ -52,6 +59,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                 f'show bgp vrf {vrf} all neighbors',
                 f'show ip ospf vrf {vrf}',
                 f'show ip ospf interface vrf {vrf}',
+                *_isis_commands(vrf),
                 *_bgp_template_commands(config, vrf),
                 *nxos_eigrp_commands(config, vrf),
             ]
@@ -71,6 +79,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             'show ip eigrp neighbors',
             'show ip eigrp neighbors detail vrf all',
             'show ip eigrp',
+            *_isis_commands('all'),
             'show ipv6 eigrp',
             'show ipv6 eigrp neighbors detail vrf all',
             'show ip interface vrf all',

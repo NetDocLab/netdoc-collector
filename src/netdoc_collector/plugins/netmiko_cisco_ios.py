@@ -6,6 +6,7 @@ from nornir.core.task import Task
 
 from .base import BasePlugin
 from .cisco_eigrp import eigrp_configured_vrfs, ios_eigrp_commands
+from .cisco_isis import ios_isis_commands, ios_isis_processes
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
@@ -26,6 +27,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                     'show ipv6 route',
                     'show ipv6 nd on-link prefix',
                     *ios_eigrp_commands(config, vrf),
+                    *ios_isis_commands(config, vrf),
                 ]
             return [
                 f'show ip arp vrf {vrf}',
@@ -36,6 +38,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                 f'show ipv6 route vrf {vrf}',
                 f'show ipv6 nd on-link prefix vrf {vrf}',
                 *ios_eigrp_commands(config, vrf),
+                *ios_isis_commands(config, vrf),
             ]
 
         # Standard commands
@@ -49,6 +52,11 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show authentication sessions',
             'show boot',
             'show cdp neighbors detail',
+            'show clns protocol',
+            'show clns interface',
+            'show clns is-neighbors detail',
+            'show isis hostname',
+            'show isis neighbors detail',
             'show device-tracking database',
             'show dot1x all',
             'show environment fan',
@@ -156,6 +164,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                 vrfs.insert(0, 'default')
             config = raw_payload.get('show running-config', '')
             vrfs.extend(name for name in eigrp_configured_vrfs(config) if name not in vrfs)
+            vrfs.extend(name for name in ios_isis_processes(config) if name not in vrfs)
             for vrf in vrfs:
                 for cmd in self.commands(vrf=vrf, config=config):
                     retries = 0
