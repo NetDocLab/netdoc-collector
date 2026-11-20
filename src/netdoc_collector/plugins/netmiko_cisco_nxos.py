@@ -1,10 +1,39 @@
 """Netmiko plugin for Cisco NX-OS devices."""
 
 import logging
+import re
 
 from nornir.core.task import Task
 
 from .base import BasePlugin
+
+
+def _bgp_template_commands(config: str, vrf: str) -> list[str]:
+    commands = {}
+    scope, vrf_indent, in_bgp = 'default', None, False
+    for line in config.splitlines():
+        item = line.strip()
+        if not item or item.startswith('!'):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if not indent:
+            in_bgp = bool(re.fullmatch(r'router bgp [\d.]+', item))
+            scope, vrf_indent = 'default', None
+        if not in_bgp:
+            continue
+        if vrf_indent is not None and indent <= vrf_indent:
+            scope, vrf_indent = 'default', None
+        if match := re.fullmatch(r'vrf ([\w.:-]+)', item, re.ASCII):
+            scope, vrf_indent = match[1], indent
+            continue
+        template = re.fullmatch(
+            r'template (peer|peer-session|peer-policy) ([\w.:-]+)', item, re.ASCII
+        )
+        if template and scope == vrf:
+            family = 'peer-template' if template[1] == 'peer' else template[1]
+            suffix = '' if vrf == 'default' else f' vrf {vrf}'
+            commands[f'show bgp {family} {template[2]}{suffix}'] = None
+    return list(commands)
 
 
 class NetmikoCiscoNxosPlugin(BasePlugin):
@@ -13,7 +42,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
     AAA_AUTH_ERROR_MESSAGE = 'AAA authorization failed'
 
     @staticmethod
-    def commands(vrf=None) -> list[str]:
+    def commands(vrf=None, *, config='') -> list[str]:
         if vrf:
             # VRF aware commands
             return [
@@ -22,6 +51,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                 f'show bgp vrf {vrf} all neighbors',
                 f'show ip ospf vrf {vrf}',
                 f'show ip ospf interface vrf {vrf}',
+                *_bgp_template_commands(config, vrf),
             ]
 
         # Standard commands
@@ -111,7 +141,9 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
             if 'default' not in seen_vrfs:
                 vrfs.insert(0, 'default')
             for vrf in vrfs:
-                for cmd in self.commands(vrf=vrf):
+                for cmd in self.commands(
+                    vrf=vrf, config=raw_payload.get('show running-config', '')
+                ):
                     retries = 0
                     while retries < self.max_retries:
                         raw_output, parsed_text = self.run_netmiko_cmd(

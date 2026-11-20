@@ -28,6 +28,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             return [
                 f'show ip arp vrf {vrf}',
                 f'show ip bgp vpnv4 vrf {vrf} neighbors',
+                f'show ip bgp vpnv6 unicast vrf {vrf} neighbors',
                 f'show ip route vrf {vrf}',
                 f'show ipv6 neighbors vrf {vrf}',
                 f'show ipv6 route vrf {vrf}',
@@ -64,6 +65,8 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show interfaces',
             'show inventory',
             'show ip bgp neighbors',
+            'show ip bgp template peer-session',
+            'show ip bgp template peer-policy',
             'show bgp ipv6 unicast neighbors',
             'show ip eigrp neighbors',
             'show ip interface',
