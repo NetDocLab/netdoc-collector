@@ -10,7 +10,7 @@ from .cisco_eigrp import eigrp_configured_vrfs, nxos_eigrp_commands
 
 
 def _bgp_template_commands(config: str, vrf: str) -> list[str]:
-    commands = {}
+    commands: dict[str, None] = {}
     scope, vrf_indent, in_bgp = 'default', None, False
     for line in config.splitlines():
         item = line.strip()

@@ -8,7 +8,7 @@ from apps.core.context import set_current_tenant
 from apps.core.models import Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
-from apps.inventory.models import Device, Site
+from apps.inventory.models import Device
 from conftest import FailingVendorPlugin, FakeVendorPlugin
 from django.contrib.auth import get_user_model
 from netdoc_sdk.client import NetDocSyncClient
@@ -58,9 +58,6 @@ class TestScanManaged:
             token=token.key,
             verify=False,
         )
-
-        # Create site
-        Site.objects.create(name='Conftest Site', is_default=True)
 
         # Create credential
         credential = Credential.objects.create(

@@ -10,7 +10,7 @@ import re
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
 from netmiko.utilities import get_structured_data
@@ -18,6 +18,9 @@ from nornir.core.exceptions import NornirSubTaskError
 from nornir.core.task import MultiResult, Task
 from nornir_netmiko.tasks import netmiko_send_command
 from textfsm.parser import TextFSMError
+
+if TYPE_CHECKING:
+    from threading import Event
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,7 @@ class BasePlugin(ABC):
             report_path (Path | None): optional directory for debug output files.
             cmd_timeout (int): per-command timeout in seconds.
         """
+        self.cancel_event: Event | None = None
         self.report_path = None
         self.host_name: str = host_name
         self.host_data: dict = host_data
