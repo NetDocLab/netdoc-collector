@@ -1,12 +1,28 @@
 """Netmiko plugin for Cisco IOS devices."""
 
 import logging
+import re
 
 from nornir.core.task import Task
 
 from .base import BasePlugin
 from .cisco_eigrp import eigrp_configured_vrfs, ios_eigrp_commands
 from .cisco_isis import ios_isis_commands, ios_isis_processes
+
+_CATALYST_9500 = re.compile(r'C9500-[A-Z0-9]+(?:-[A-Z0-9]+)*', re.I)
+_IOS_XE_17_3 = re.compile(r'17\.0?3\.[0-9]+[a-z]?', re.I)
+
+
+def _supports_system_mtu(version_rows) -> bool:
+    for row in version_rows:
+        hardware = row.get('hardware')
+        if (
+            isinstance(hardware, list)
+            and _IOS_XE_17_3.fullmatch(str(row.get('version', '')))
+            and any(_CATALYST_9500.fullmatch(str(model)) for model in hardware)
+        ):
+            return True
+    return False
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
@@ -135,23 +151,23 @@ class NetmikoCiscoIosPlugin(BasePlugin):
         raw_payload: dict[str, str] = {}
         parsed_payload: dict[str, list] = {}
 
-        try:
-            # Running Standard commands
-            for cmd in self.commands():
-                retries = 0
-                while retries < self.max_retries:
-                    raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                    if raw_output is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_output:
-                        raw_payload[cmd] = raw_output
-                        if parsed_output:
-                            parsed_payload[cmd] = parsed_output
+        def run_commands(commands):
+            for cmd in commands:
+                for _ in range(self.max_retries):
+                    raw, parsed = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+                    if raw is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw:
+                        raw_payload[cmd] = raw
+                        if parsed:
+                            parsed_payload[cmd] = parsed
                         break
                     logging.error(
                         'Retrying command %s on %s due to AAA authorization error',
                         cmd,
                         self.host_name,
                     )
-                    retries += 1
+
+        try:
+            run_commands(self.commands())
 
             # Running VRF aware commands
             vrfs = []
@@ -168,21 +184,10 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             vrfs.extend(name for name in eigrp_configured_vrfs(config) if name not in vrfs)
             vrfs.extend(name for name in ios_isis_processes(config) if name not in vrfs)
             for vrf in vrfs:
-                for cmd in self.commands(vrf=vrf, config=config):
-                    retries = 0
-                    while retries < self.max_retries:
-                        raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                        if raw_text is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_text:
-                            raw_payload[cmd] = raw_text
-                            if parsed_text:
-                                parsed_payload[cmd] = parsed_text
-                            break
-                        logging.error(
-                            'Retrying command %s on %s due to AAA authorization error',
-                            cmd,
-                            self.host_name,
-                        )
-                        retries += 1
+                run_commands(self.commands(vrf=vrf, config=config))
+
+            if _supports_system_mtu(parsed_payload.get('show version', [])):
+                run_commands(['show system mtu'])
 
         except Exception:
             logging.error('Stopping collection on %s due to error', self.host_name)
