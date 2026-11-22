@@ -6,11 +6,10 @@ import uuid
 from unittest.mock import patch
 
 import pytest
-from apps.core.context import set_current_tenant
-from apps.core.models import LogRecord, Tenant
+from apps.core.models import LogRecord
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
-from apps.inventory.models import CanonicalDevice, Device, Site
+from apps.inventory.models import CanonicalDevice, Device
 from conftest import FailingVendorPlugin, FakeVendorPlugin, _workdir
 from django.contrib.auth import get_user_model
 from nornir.core.plugins.inventory import InventoryPluginRegister
@@ -25,7 +24,7 @@ class TestCollectorManaged:
     """Managed collector."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, live_server, scanner, tmp_path):
+    def setup(self, live_server, scanner, tmp_path, managed_site):
         InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
         admin_username = 'conftest-admin'
@@ -33,9 +32,7 @@ class TestCollectorManaged:
         collector_username = 'conftest-collector'
         collector_password = '986629a7ca89202a3ef2ae1dd9d5fb37'
 
-        # Create tenant
-        tenant = Tenant.objects.create(name='conftest-tenant')
-        set_current_tenant(tenant)
+        tenant = managed_site.tenant
 
         # Create collector user
         User = get_user_model()
@@ -52,9 +49,6 @@ class TestCollectorManaged:
             tenant=tenant,
         )
         token, _ = Token.objects.get_or_create(user=collector_user)
-
-        # Create site
-        site = Site.objects.create(name='Conftest Site', is_default=True)
 
         # Create credential
         credential = Credential.objects.create(
@@ -76,7 +70,7 @@ class TestCollectorManaged:
             is_discoverable=True,
             credential=credential,
             discovery_mode='netmiko:cisco:ios:ssh',
-            site=site,
+            site=managed_site,
             tenant=tenant,
         )
 

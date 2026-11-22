@@ -31,6 +31,18 @@ You can also provide the token and URL directly as CLI flags:
 netdoc-collector --url https://netdoc.example.com --token mytoken --workers 8
 ```
 
+## L2/L3 command coverage
+
+The Cisco IOS, IOS-XE and NX-OS plugins retain native command output for
+the backend to interpret. Command selection and positive platform evidence
+determine which scoped observations can be submitted. Empty or unavailable
+output does not establish that a feature is disabled. For release-specific
+validation records, see the [NetDoc L2/L3 implementation tracker](https://github.com/NetDocLab/netdoc/issues/215).
+
+Managed discovery integration tests use the matching backend checkout and
+its PostgreSQL test settings. Tenant setup creates the root Site used by
+new Devices.
+
 ## Files
 
 - config.yaml: primary configuration for collector behavior

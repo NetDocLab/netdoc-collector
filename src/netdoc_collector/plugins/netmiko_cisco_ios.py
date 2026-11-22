@@ -1,19 +1,38 @@
 """Netmiko plugin for Cisco IOS devices."""
 
 import logging
+import re
 
 from nornir.core.task import Task
 
 from .base import BasePlugin
+from .cisco_eigrp import eigrp_configured_vrfs, ios_eigrp_commands
+from .cisco_isis import ios_isis_commands, ios_isis_processes
+from .cisco_vrfs import discovered_vrf_names
+
+_CATALYST_9500 = re.compile(r'C9500-[A-Z0-9]+(?:-[A-Z0-9]+)*', re.I)
+_IOS_XE_17_3 = re.compile(r'17\.0?3\.[0-9]+[a-z]?', re.I)
+
+
+def _supports_system_mtu(version_rows) -> bool:
+    for row in version_rows:
+        hardware = row.get('hardware')
+        if (
+            isinstance(hardware, list)
+            and _IOS_XE_17_3.fullmatch(str(row.get('version', '')))
+            and any(_CATALYST_9500.fullmatch(str(model)) for model in hardware)
+        ):
+            return True
+    return False
 
 
 class NetmikoCiscoIosPlugin(BasePlugin):
     """Netmiko plugin for Cisco IOS devices."""
 
-    AAA_AUTH_ERROR_MESSAGE ="AAA authorization failed"
+    AAA_AUTH_ERROR_MESSAGE = 'AAA authorization failed'
 
     @staticmethod
-    def commands(vrf=None) -> list[str]:
+    def commands(vrf=None, *, config='') -> list[str]:
         if vrf:
             # VRF aware commands
             if vrf == 'default':
@@ -21,10 +40,22 @@ class NetmikoCiscoIosPlugin(BasePlugin):
                 return [
                     'show ip arp',
                     'show ip route',
+                    'show ipv6 neighbors',
+                    'show ipv6 route',
+                    'show ipv6 nd on-link prefix',
+                    *ios_eigrp_commands(config, vrf),
+                    *ios_isis_commands(config, vrf),
                 ]
             return [
                 f'show ip arp vrf {vrf}',
+                f'show ip bgp vpnv4 vrf {vrf} neighbors',
+                f'show ip bgp vpnv6 unicast vrf {vrf} neighbors',
                 f'show ip route vrf {vrf}',
+                f'show ipv6 neighbors vrf {vrf}',
+                f'show ipv6 route vrf {vrf}',
+                f'show ipv6 nd on-link prefix vrf {vrf}',
+                *ios_eigrp_commands(config, vrf),
+                *ios_isis_commands(config, vrf),
             ]
 
         # Standard commands
@@ -38,6 +69,11 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show authentication sessions',
             'show boot',
             'show cdp neighbors detail',
+            'show clns protocol',
+            'show clns interface',
+            'show clns is-neighbors detail',
+            'show isis hostname',
+            'show isis neighbors detail',
             'show device-tracking database',
             'show dot1x all',
             'show environment fan',
@@ -57,10 +93,31 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show interfaces',
             'show inventory',
             'show ip bgp neighbors',
+            'show ip bgp template peer-session',
+            'show ip bgp template peer-policy',
+            'show bgp ipv6 unicast neighbors',
             'show ip eigrp neighbors',
+            'show ip eigrp neighbors detail',
+            'show ip eigrp interfaces detail',
+            'show ipv6 eigrp neighbors detail',
+            'show ipv6 eigrp interfaces detail',
             'show ip interface',
+            'show ip ospf',
             'show ip ospf neighbor',
+            'show ip ospf interface',
             'show ip ssh',
+            'show ipv6 interface',
+            'show ipv6 ospf',
+            'show ipv6 ospf interface',
+            'show ipv6 ospf neighbor detail',
+            'show ipv6 ospf virtual-links',
+            'show ospfv3',
+            'show ospfv3 ipv4 interface',
+            'show ospfv3 ipv4 neighbor detail',
+            'show ospfv3 ipv4 virtual-links',
+            'show ospfv3 ipv6 interface',
+            'show ospfv3 ipv6 neighbor detail',
+            'show ospfv3 ipv6 virtual-links',
             'show isis neighbors',
             'show license status',
             'show license summary',
@@ -77,12 +134,14 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             'show spanning-tree summary',
             'show spanning-tree',
             'show standby',
+            'show standby all',
             'show switch stack-ports',
             'show switch',
             'show version',
             'show vlan',
             'show vrf',
             'show vrrp all',
+            'show vrrp detail',
             'show vtp status',
             'show wlan sum',
         ]
@@ -93,34 +152,34 @@ class NetmikoCiscoIosPlugin(BasePlugin):
         raw_payload: dict[str, str] = {}
         parsed_payload: dict[str, list] = {}
 
-        try:
-            # Running Standard commands
-            for cmd in self.commands():
-                retries = 0
-                while retries < self.max_retries:
-                    raw_output, parsed_output = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                    if raw_output is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_output:
-                        raw_payload[cmd] = raw_output
-                        if parsed_output:
-                            parsed_payload[cmd] = parsed_output
+        def run_commands(commands):
+            for cmd in commands:
+                for _ in range(self.max_retries):
+                    raw, parsed = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
+                    if raw is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw:
+                        raw_payload[cmd] = raw
+                        if parsed:
+                            parsed_payload[cmd] = parsed
                         break
-                    logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
-                    retries += 1
+                    logging.error(
+                        'Retrying command %s on %s due to AAA authorization error',
+                        cmd,
+                        self.host_name,
+                    )
+
+        try:
+            run_commands(self.commands())
 
             # Running VRF aware commands
-            vrfs = ['default'] + [vrf['name'] for vrf in parsed_payload.get('show vrf', [])]
+            vrfs = discovered_vrf_names(parsed_payload.get('show vrf', []))
+            config = raw_payload.get('show running-config', '')
+            vrfs.extend(name for name in eigrp_configured_vrfs(config) if name not in vrfs)
+            vrfs.extend(name for name in ios_isis_processes(config) if name not in vrfs)
             for vrf in vrfs:
-                for cmd in self.commands(vrf=vrf):
-                    retries = 0
-                    while retries < self.max_retries:
-                        raw_text, parsed_text = self.run_netmiko_cmd(task, netmiko_device_type, cmd)
-                        if raw_text is not None and self.AAA_AUTH_ERROR_MESSAGE not in raw_text:
-                            raw_payload[cmd] = raw_text
-                            if parsed_text:
-                                parsed_payload[cmd] = parsed_text
-                            break
-                        logging.error('Retrying command %s on %s due to AAA authorization error', cmd, self.host_name)
-                        retries += 1
+                run_commands(self.commands(vrf=vrf, config=config))
+
+            if _supports_system_mtu(parsed_payload.get('show version', [])):
+                run_commands(['show system mtu'])
 
         except Exception:
             logging.error('Stopping collection on %s due to error', self.host_name)

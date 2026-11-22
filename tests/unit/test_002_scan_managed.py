@@ -4,11 +4,9 @@ import uuid
 from unittest.mock import patch
 
 import pytest
-from apps.core.context import set_current_tenant
-from apps.core.models import Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
-from apps.inventory.models import Device, Site
+from apps.inventory.models import Device
 from conftest import FailingVendorPlugin, FakeVendorPlugin
 from django.contrib.auth import get_user_model
 from netdoc_sdk.client import NetDocSyncClient
@@ -24,7 +22,7 @@ class TestScanManaged:
     """Managed scan upload data to the backend."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, live_server, scanner, tmp_path):
+    def setup(self, live_server, scanner, tmp_path, managed_site):
         InventoryPluginRegister.register('NetDocAnsibleInventory', NetDocAnsibleInventory)
 
         admin_username = 'conftest-admin'
@@ -32,9 +30,7 @@ class TestScanManaged:
         collector_username = 'conftest-collector'
         collector_password = '986629a7ca89202a3ef2ae1dd9d5fb37'
 
-        # Create tenant
-        tenant = Tenant.objects.create(name='conftest-tenant')
-        set_current_tenant(tenant)
+        tenant = managed_site.tenant
 
         # Create collector user
         User = get_user_model()
@@ -58,9 +54,6 @@ class TestScanManaged:
             token=token.key,
             verify=False,
         )
-
-        # Create site
-        Site.objects.create(name='Conftest Site', is_default=True)
 
         # Create credential
         credential = Credential.objects.create(

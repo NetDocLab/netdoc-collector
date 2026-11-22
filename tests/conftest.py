@@ -4,6 +4,9 @@ from unittest.mock import MagicMock
 
 import pytest
 import yaml
+from apps.core.context import set_current_tenant
+from apps.core.models import Tenant
+from apps.inventory.models import Site
 from nornir.core.task import AggregatedResult, MultiResult, Result
 
 from netdoc_collector.core.scanner import NetworkScanner
@@ -816,6 +819,17 @@ class FailingVendorPlugin(FakeVendorPlugin):
 
     def collect(self, task) -> dict:
         raise RuntimeError('simulated device failure')
+
+
+@pytest.fixture
+def managed_site(live_server):
+    """Use the new tenant's root, provisioning its default site on older backends."""
+    tenant = Tenant.objects.create(name='conftest-tenant')
+    set_current_tenant(tenant)
+    try:
+        return Site.objects.get(tenant=tenant)
+    except Site.DoesNotExist:
+        return Site.objects.create(tenant=tenant, name='Conftest Site', is_default=True)
 
 
 @pytest.fixture
