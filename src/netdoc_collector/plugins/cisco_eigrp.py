@@ -2,11 +2,11 @@
 
 import re
 
-_TOKEN = r'[a-zA-Z0-9_.:-]+'
-_ROUTER = re.compile(rf'router eigrp ({_TOKEN})$')
-_VRF = re.compile(rf'vrf ({_TOKEN})$')
+_IDENTIFIER_PATTERN = r'[a-zA-Z0-9_.:-]+'
+_ROUTER = re.compile(rf'router eigrp ({_IDENTIFIER_PATTERN})$')
+_VRF = re.compile(rf'vrf ({_IDENTIFIER_PATTERN})$')
 _AF = re.compile(
-    rf'address-family (ipv[46])(?: unicast)?(?: vrf ({_TOKEN}))?(?: autonomous-system (\d+))?$'
+    rf'address-family (ipv[46])(?: unicast)?(?: vrf ({_IDENTIFIER_PATTERN}))?(?: autonomous-system (\d+))?$'
 )
 
 

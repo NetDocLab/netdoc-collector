@@ -8,6 +8,7 @@ from nornir.core.task import Task
 from .base import BasePlugin
 from .cisco_eigrp import eigrp_configured_vrfs, ios_eigrp_commands
 from .cisco_isis import ios_isis_commands, ios_isis_processes
+from .cisco_vrfs import discovered_vrf_names
 
 _CATALYST_9500 = re.compile(r'C9500-[A-Z0-9]+(?:-[A-Z0-9]+)*', re.I)
 _IOS_XE_17_3 = re.compile(r'17\.0?3\.[0-9]+[a-z]?', re.I)
@@ -170,16 +171,7 @@ class NetmikoCiscoIosPlugin(BasePlugin):
             run_commands(self.commands())
 
             # Running VRF aware commands
-            vrfs = []
-            seen_vrfs = set()
-            for row in parsed_payload.get('show vrf', []):
-                name = str(row.get('name', '')).strip()
-                key = name
-                if name and key not in seen_vrfs:
-                    seen_vrfs.add(key)
-                    vrfs.append(name)
-            if 'default' not in seen_vrfs:
-                vrfs.insert(0, 'default')
+            vrfs = discovered_vrf_names(parsed_payload.get('show vrf', []))
             config = raw_payload.get('show running-config', '')
             vrfs.extend(name for name in eigrp_configured_vrfs(config) if name not in vrfs)
             vrfs.extend(name for name in ios_isis_processes(config) if name not in vrfs)

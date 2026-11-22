@@ -7,6 +7,7 @@ from nornir.core.task import Task
 
 from .base import BasePlugin
 from .cisco_eigrp import eigrp_configured_vrfs, nxos_eigrp_commands
+from .cisco_vrfs import discovered_vrf_names
 
 
 def _bgp_template_commands(config: str, vrf: str) -> list[str]:
@@ -146,16 +147,7 @@ class NetmikoCiscoNxosPlugin(BasePlugin):
                     retries += 1
 
             # Running VRF aware commands
-            vrfs = []
-            seen_vrfs = set()
-            for row in parsed_payload.get('show vrf detail', []):
-                name = str(row.get('name', '')).strip()
-                key = name
-                if name and key not in seen_vrfs:
-                    seen_vrfs.add(key)
-                    vrfs.append(name)
-            if 'default' not in seen_vrfs:
-                vrfs.insert(0, 'default')
+            vrfs = discovered_vrf_names(parsed_payload.get('show vrf detail', []))
             config = raw_payload.get('show running-config', '')
             vrfs.extend(
                 name for name in eigrp_configured_vrfs(config, nxos=True) if name not in vrfs
