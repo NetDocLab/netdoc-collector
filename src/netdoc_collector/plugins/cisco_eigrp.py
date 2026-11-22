@@ -26,7 +26,7 @@ def _process_lines(config):
 
 def ios_eigrp_commands(config, vrf):
     """Request named-mode tables by their configured family, VRF and AS."""
-    commands = {}
+    commands: dict[str, None] = {}
     for _, indent, statement in _process_lines(config):
         af = _AF.fullmatch(statement) if indent else None
         if af and (af[2] or 'default') == vrf and af[3] and 1 <= int(af[3]) <= 65535:
@@ -38,7 +38,7 @@ def ios_eigrp_commands(config, vrf):
 
 def eigrp_configured_vrfs(config, *, nxos=False):
     """Find named scopes even when the general show VRF parser is unavailable."""
-    names = {}
+    names: dict[str, None] = {}
     for _, indent, statement in _process_lines(config):
         match = (_VRF if nxos else _AF).fullmatch(statement) if indent else None
         if match and (name := match[1 if nxos else 2]):
@@ -48,7 +48,7 @@ def eigrp_configured_vrfs(config, *, nxos=False):
 
 def nxos_eigrp_commands(config, vrf):
     """Request each NX-OS process using its tag and actual configured scope."""
-    selectors = {}
+    selectors: dict[tuple[str, str], None] = {}
     scope, vrf_indent = 'default', None
     for process, indent, statement in _process_lines(config):
         if not indent or (vrf_indent is not None and indent <= vrf_indent):

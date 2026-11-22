@@ -10,7 +10,8 @@ from apps.core.context import set_current_tenant
 from apps.core.models import LogRecord, Tenant
 from apps.discovery.models import Collector, Credential, DiscoveryJob, RawOutput
 from apps.discovery.services import DiscoveryRunService
-from apps.inventory.models import CanonicalDevice, Device, Site
+from apps.inventory.models import CanonicalDevice, Device
+from apps.inventory.services import SiteService
 from conftest import FailingVendorPlugin, FakeVendorPlugin, _workdir
 from django.contrib.auth import get_user_model
 from nornir.core.plugins.inventory import InventoryPluginRegister
@@ -53,8 +54,7 @@ class TestCollectorManaged:
         )
         token, _ = Token.objects.get_or_create(user=collector_user)
 
-        # Create site
-        site = Site.objects.create(name='Conftest Site', is_default=True)
+        site = SiteService.get_root_site(tenant)
 
         # Create credential
         credential = Credential.objects.create(
